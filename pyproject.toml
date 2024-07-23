@@ -7,7 +7,6 @@ license = {file = "LICENSE"}
 maintainers = [{name = "Nadav Tasher", email = "hey@nadav.app"}]
 classifiers = [
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
 keywords = ["redis", "rejson", "database", "dict"]
@@ -23,7 +22,7 @@ requires = ["setuptools>=61.0", "redis>=4.2.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.distutils.bdist_wheel]
-universal = true
+universal = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
