@@ -1,0 +1,35 @@
+[project]
+name = "rednest"
+version = "0.1.0"
+description = "Redis object nesting using ReJSON"
+readme = "README.md"
+license = {file = "LICENSE"}
+maintainers = [{name = "Nadav Tasher", email = "hey@nadav.app"}]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+keywords = ["redis", "rejson", "database", "dict"]
+
+[project.urls]
+Homepage = "https://github.com/NadavTasher/RedNest"
+
+[options]
+exclude = "tests"
+
+[build-system]
+requires = ["setuptools>=61.0", "redis>=4.2.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.distutils.bdist_wheel]
+universal = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.yapf]
+based_on_style = "google"
+column_limit = 400
+indent_width = 4
