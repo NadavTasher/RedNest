@@ -7,6 +7,7 @@ OBJECT_BASE_PATH = "$"
 # Encoding
 ENCODING = "utf-8"
 
+
 class RedisObject(object):
 
     def __init__(self, path: str, redis: redis.Redis, subkey: str = OBJECT_BASE_PATH) -> None:

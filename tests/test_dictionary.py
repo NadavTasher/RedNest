@@ -124,6 +124,22 @@ def test_representation(database):
 def test_delete(database):
     # Load some values
     database["Persistent"] = "Test"
+    database["Volatile"] = "Forbidden"
+
+    # Make sure values exist
+    assert "Persistent" in database
+    assert "Volatile" in database
+
+    # Compare values
+    assert database["Persistent"] == "Test"
+    assert database["Volatile"] == "Forbidden"
+
+    # Delete one value
+    del database["Volatile"]
+
+    # Make sure persistent value exists
+    assert "Persistent" in database
+    assert database["Persistent"] == "Test"
 
 
 def test_clear(database):
@@ -144,5 +160,5 @@ def test_clear(database):
     assert not database
 
     # Make sure other does not exist
-    with pytest.raises(OSError):
+    with pytest.raises(KeyError):
         assert not other

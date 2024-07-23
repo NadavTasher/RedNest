@@ -33,20 +33,23 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         if item_type == b"object":
             return RedisDictionary(self._path, self._redis, self._subkey + "." + key)
 
-        # Default - return the item value
+        # Fetch the item value
         item_value, = self._json.get(ROOT_STRUCTURE + self._path, self._subkey + "." + key)
+
+        # Default - return the item value
         return item_value
 
     def __setitem__(self, key, value):
+        # Set the item
         self._json.set(ROOT_STRUCTURE + self._path, self._subkey + "." + key, value)
 
     def __delitem__(self, key):
-        print(self._path, self._subkey, key)
+        # Delete the item from the database
         self._json.delete(ROOT_STRUCTURE + self._path, self._subkey + "." + key)
 
     def __contains__(self, key):
         # Make sure key exists in database
-        return self._json.type(ROOT_STRUCTURE + self._path, self._subkey + "." + key) is not None
+        return bool(self._json.type(ROOT_STRUCTURE + self._path, self._subkey + "." + key))
 
     def __iter__(self):
         # Fetch the object keys
@@ -63,7 +66,7 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         # If object length is an empty list, raise a KeyError
         if not object_length:
             raise KeyError(self._subkey)
-        
+
         # Untuple the result
         object_length, = object_length
 
