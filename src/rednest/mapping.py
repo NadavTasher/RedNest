@@ -1,12 +1,7 @@
 import json
 import functools
 
-try:
-    # Python 3 mapping
-    from collections.abc import MutableMapping, Mapping
-except:
-    # Python 2 mapping
-    from collections import MutableMapping, Mapping
+from collections.abc import MutableMapping, Mapping
 
 
 class AdvancedMutableMapping(MutableMapping):

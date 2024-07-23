@@ -4,17 +4,16 @@ import redis
 ROOT_STRUCTURE = "."
 OBJECT_BASE_PATH = "$"
 
-# Encoding
-ENCODING = "utf-8"
-
 
 class RedisObject(object):
 
-    def __init__(self, path: str, redis: redis.Redis, subkey: str = OBJECT_BASE_PATH) -> None:
+    _OBJECT_CLASSES = dict()
+
+    def __init__(self, path: str, redis: redis.Redis, subpath: str = OBJECT_BASE_PATH) -> None:
         # Set internal input parameters
-        self._path = path
+        self._name = path
         self._redis = redis
-        self._subkey = subkey
+        self._subpath = subpath
 
         # Initialize JSON module
         self._json = self._redis.json()
@@ -24,6 +23,10 @@ class RedisObject(object):
 
         # Call the object initializer
         self._initialize_object()
+
+    @property
+    def _encoding(self):
+        return "utf-8"
 
     def _initialize_database(self):
         # Make sure the root structure exists

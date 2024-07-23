@@ -1,163 +1,150 @@
-import os
-import redis
 import pytest
-import tempfile
-import itertools
 
 from rednest import *
 
-REDIS = redis.Redis()
+from test_utilities import dictionary
 
 
-@pytest.fixture()
-def database(request):
-    # Generate random name
-    rand_name = os.urandom(4).hex()
-
-    # Create a random dictionary
-    return RedisDictionary("." + rand_name, REDIS)
-
-
-def test_write_read_has_delete(database):
-    # Make sure the database does not have the item
-    assert "Hello" not in database
+def test_write_read_has_delete(dictionary):
+    # Make sure the dictionary does not have the item
+    assert "Hello" not in dictionary
 
     # Write the Hello value
-    database["Hello"] = "World"
+    dictionary["Hello"] = "World"
 
     # Read the Hello value
-    assert database["Hello"] == "World"
+    assert dictionary["Hello"] == "World"
 
-    # Make sure the database has the Hello item
-    assert "Hello" in database
+    # Make sure the dictionary has the Hello item
+    assert "Hello" in dictionary
 
     # Delete the item
-    del database["Hello"]
+    del dictionary["Hello"]
 
-    # Make sure the database does not have the item
-    assert "Hello" not in database
+    # Make sure the dictionary does not have the item
+    assert "Hello" not in dictionary
 
     # Make sure the getter now raises
     with pytest.raises(KeyError):
-        assert database["Hello"] == "World"
+        assert dictionary["Hello"] == "World"
 
 
-def test_write_recursive_dicts(database):
+def test_write_recursive_dicts(dictionary):
     # Write the Hello value
-    database["Hello"] = {"World": 42}
+    dictionary["Hello"] = {"World": 42}
 
     # Read the Hello value
-    assert database["Hello"] == dict(World=42)
+    assert dictionary["Hello"] == dict(World=42)
 
     # Make sure the Hello value is a dictionary
-    assert isinstance(database["Hello"], RedisDictionary)
+    assert isinstance(dictionary["Hello"], RedisDictionary)
 
 
-def test_len(database):
-    # Make sure database is empty
-    assert not database
+def test_len(dictionary):
+    # Make sure dictionary is empty
+    assert not dictionary
 
-    # Load value to database
-    database["Hello"] = "World"
+    # Load value to dictionary
+    dictionary["Hello"] = "World"
 
-    # Make sure database is not empty
-    assert database
-
-
-def test_pop(database):
-    # Load value to database
-    database["Hello"] = "World"
-
-    # Pop the item from the database
-    assert database.pop("Hello") == "World"
-
-    # Make sure the database is empty
-    assert not database
+    # Make sure dictionary is not empty
+    assert dictionary
 
 
-def test_popitem(database):
-    # Load value to database
-    database["Hello"] = "World"
+def test_pop(dictionary):
+    # Load value to dictionary
+    dictionary["Hello"] = "World"
 
-    # Pop the item from the database
-    assert database.popitem() == ("Hello", "World")
+    # Pop the item from the dictionary
+    assert dictionary.pop("Hello") == "World"
 
-    # Make sure the database is empty
-    assert not database
+    # Make sure the dictionary is empty
+    assert not dictionary
 
 
-def test_copy(database):
-    # Load values to database
-    database["Hello1"] = "World1"
-    database["Hello2"] = "World2"
+def test_popitem(dictionary):
+    # Load value to dictionary
+    dictionary["Hello"] = "World"
 
-    # Copy the database and compare
-    copy = database.copy()
+    # Pop the item from the dictionary
+    assert dictionary.popitem() == ("Hello", "World")
+
+    # Make sure the dictionary is empty
+    assert not dictionary
+
+
+def test_copy(dictionary):
+    # Load values to dictionary
+    dictionary["Hello1"] = "World1"
+    dictionary["Hello2"] = "World2"
+
+    # Copy the dictionary and compare
+    copy = dictionary.copy()
 
     # Check copy
     assert isinstance(copy, dict)
     assert copy == {"Hello1": "World1", "Hello2": "World2"}
 
 
-def test_equals(database):
-    # Load values to database
-    database["Hello1"] = "World1"
-    database["Hello2"] = "World2"
+def test_equals(dictionary):
+    # Load values to dictionary
+    dictionary["Hello1"] = "World1"
+    dictionary["Hello2"] = "World2"
 
-    assert database == {"Hello1": "World1", "Hello2": "World2"}
-    assert database != {"Hello1": "World1", "Hello2": "World2", "Hello3": "World3"}
-    assert database != {"Hello2": "World2", "Hello3": "World3"}
+    assert dictionary == {"Hello1": "World1", "Hello2": "World2"}
+    assert dictionary != {"Hello1": "World1", "Hello2": "World2", "Hello3": "World3"}
+    assert dictionary != {"Hello2": "World2", "Hello3": "World3"}
 
 
-def test_representation(database):
+def test_representation(dictionary):
     # Make sure looks good empty
-    assert repr(database) == "{}"
+    assert repr(dictionary) == "{}"
 
     # Load some values
-    database["Hello"] = "World"
-    database["Other"] = {"Test": 1}
+    dictionary["Hello"] = "World"
+    dictionary["Other"] = {"Test": 1}
 
     # Make sure looks good with data
-    assert repr(database) in ["{'Hello': 'World', 'Other': {'Test': 1}}", "{'Other': {'Test': 1}, 'Hello': 'World'}"] + ["{u'Hello': u'World', u'Other': {u'Test': 1}}", "{u'Other': {u'Test': 1}, u'Hello': u'World'}"]
+    assert repr(dictionary) in ["{'Hello': 'World', 'Other': {'Test': 1}}", "{'Other': {'Test': 1}, 'Hello': 'World'}"] + ["{u'Hello': u'World', u'Other': {u'Test': 1}}", "{u'Other': {u'Test': 1}, u'Hello': u'World'}"]
 
 
-def test_delete(database):
+def test_delete(dictionary):
     # Load some values
-    database["Persistent"] = "Test"
-    database["Volatile"] = "Forbidden"
+    dictionary["Persistent"] = "Test"
+    dictionary["Volatile"] = "Forbidden"
 
     # Make sure values exist
-    assert "Persistent" in database
-    assert "Volatile" in database
+    assert "Persistent" in dictionary
+    assert "Volatile" in dictionary
 
     # Compare values
-    assert database["Persistent"] == "Test"
-    assert database["Volatile"] == "Forbidden"
+    assert dictionary["Persistent"] == "Test"
+    assert dictionary["Volatile"] == "Forbidden"
 
     # Delete one value
-    del database["Volatile"]
+    del dictionary["Volatile"]
 
     # Make sure persistent value exists
-    assert "Persistent" in database
-    assert database["Persistent"] == "Test"
+    assert "Persistent" in dictionary
+    assert dictionary["Persistent"] == "Test"
 
 
-def test_clear(database):
+def test_clear(dictionary):
     # Load some values
-    database["Hello"] = "World"
-    database["Other"] = {"Test": 1}
+    dictionary["Hello"] = "World"
+    dictionary["Other"] = {"Test": 1}
 
-    # Fetch other database
-    other = database["Other"]
+    # Fetch other dictionary
+    other = dictionary["Other"]
 
     # Make sure other is not empty
     assert other
 
-    # Clear the database
-    database.clear()
+    # Clear the dictionary
+    dictionary.clear()
 
-    # Make sure database is empty
-    assert not database
+    # Make sure dictionary is empty
+    assert not dictionary
 
     # Make sure other does not exist
     with pytest.raises(KeyError):
