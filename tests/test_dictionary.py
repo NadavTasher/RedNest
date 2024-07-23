@@ -121,6 +121,11 @@ def test_representation(database):
     assert repr(database) in ["{'Hello': 'World', 'Other': {'Test': 1}}", "{'Other': {'Test': 1}, 'Hello': 'World'}"] + ["{u'Hello': u'World', u'Other': {u'Test': 1}}", "{u'Other': {u'Test': 1}, u'Hello': u'World'}"]
 
 
+def test_delete(database):
+    # Load some values
+    database["Persistent"] = "Test"
+
+
 def test_clear(database):
     # Load some values
     database["Hello"] = "World"

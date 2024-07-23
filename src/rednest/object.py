@@ -4,6 +4,8 @@ import redis
 ROOT_STRUCTURE = "."
 OBJECT_BASE_PATH = "$"
 
+# Encoding
+ENCODING = "utf-8"
 
 class RedisObject(object):
 

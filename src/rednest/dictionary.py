@@ -4,7 +4,7 @@ import hashlib
 from rednest.bunch import MutableAttributeMapping
 from rednest.mapping import AdvancedMutableMapping, Mapping
 
-from rednest.object import RedisObject, ROOT_STRUCTURE, OBJECT_BASE_PATH
+from rednest.object import RedisObject, ENCODING, ROOT_STRUCTURE, OBJECT_BASE_PATH
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
@@ -31,7 +31,7 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
 
         # Return different types as needed
         if item_type == b"object":
-            return RedisDictionary(self._path, self._redis, key)
+            return RedisDictionary(self._path, self._redis, self._subkey + "." + key)
 
         # Default - return the item value
         item_value, = self._json.get(ROOT_STRUCTURE + self._path, self._subkey + "." + key)
@@ -41,6 +41,7 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         self._json.set(ROOT_STRUCTURE + self._path, self._subkey + "." + key, value)
 
     def __delitem__(self, key):
+        print(self._path, self._subkey, key)
         self._json.delete(ROOT_STRUCTURE + self._path, self._subkey + "." + key)
 
     def __contains__(self, key):
@@ -51,12 +52,20 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         # Fetch the object keys
         object_keys, = self._json.objkeys(ROOT_STRUCTURE + self._path, self._subkey)
 
-        # Return an iterator of the data
-        return iter(object_keys)
+        # Loop over keys and decode them
+        for object_key in object_keys:
+            yield object_key.decode(ENCODING)
 
     def __len__(self):
         # Fetch the object length
-        object_length, = self._json.objlen(ROOT_STRUCTURE + self._path, self._subkey)
+        object_length = self._json.objlen(ROOT_STRUCTURE + self._path, self._subkey)
+
+        # If object length is an empty list, raise a KeyError
+        if not object_length:
+            raise KeyError(self._subkey)
+        
+        # Untuple the result
+        object_length, = object_length
 
         # Return the object length
         return object_length
@@ -114,8 +123,6 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
 
         # Pop a key from the list
         key = keys.pop()
-
-        print(key)
 
         # Return the key and the value
         return key, self.pop(key)
