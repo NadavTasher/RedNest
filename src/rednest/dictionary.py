@@ -40,7 +40,7 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         return item_value
 
     def __setitem__(self, key, value):
-        # Set the item
+        # Set the item in the database
         self._json.set(ROOT_STRUCTURE + self._path, self._subkey + "." + key, value)
 
     def __delitem__(self, key):
