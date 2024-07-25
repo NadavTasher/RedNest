@@ -13,17 +13,15 @@ DEFAULT = object()
 
 class Dictionary(MutableMapping[str, typing.Any], Nested):
 
+    # Bunch mode switch
     BUNCH = True
+
+    # Type globals
+    DEFAULT = {}
 
     def _make_subpath(self, key: str) -> str:
         # Create and return a subpath
         return f"{self._subpath}.{key}"
-
-    def _initialize_object(self) -> None:
-        # Make sure object is initialized
-        if not self._json.type(ROOT_STRUCTURE + self._name, self._subpath):
-            # Initialize sub-structure
-            self._json.set(ROOT_STRUCTURE + self._name, self._subpath, {})
 
     def __getitem__(self, key: str) -> typing.Any:
         # Make sure key is a string
@@ -31,7 +29,7 @@ class Dictionary(MutableMapping[str, typing.Any], Nested):
             raise TypeError(type(key))
 
         # Fetch the item type
-        item_type = self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(key))
+        item_type = self._json.type(self._absolute_name, self._make_subpath(key))
 
         # If the item type is None, the item is not set
         if not item_type:
@@ -45,34 +43,34 @@ class Dictionary(MutableMapping[str, typing.Any], Nested):
             return CLASSES[item_type_value](self._name, self._redis, self._make_subpath(key))
 
         # Fetch the item value
-        item_value, = self._json.get(ROOT_STRUCTURE + self._name, self._make_subpath(key))
+        item_value, = self._json.get(self._absolute_name, self._make_subpath(key))
 
         # Default - return the item value
         return item_value
 
     def __setitem__(self, key: str, value: typing.Any) -> None:
         # Set the item in the database
-        self._json.set(ROOT_STRUCTURE + self._name, self._make_subpath(key), value)
+        self._json.set(self._absolute_name, self._make_subpath(key), value)
 
     def __delitem__(self, key: str) -> None:
         # Delete the item from the database
-        self._json.delete(ROOT_STRUCTURE + self._name, self._make_subpath(key))
+        self._json.delete(self._absolute_name, self._make_subpath(key))
 
     def __contains__(self, key: str) -> bool:  # type: ignore[override]
         # Make sure key exists in database
-        return bool(self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(key)))
+        return bool(self._json.type(self._absolute_name, self._make_subpath(key)))
 
     def __iter__(self) -> typing.Iterator[str]:
         # Fetch the object keys
-        object_keys, = self._json.objkeys(ROOT_STRUCTURE + self._name, self._subpath)
+        object_keys, = self._json.objkeys(self._absolute_name, self._subpath)
 
         # Loop over keys and decode them
         for object_key in object_keys:
-            yield object_key.decode(self._encoding)
+            yield object_key.decode(self.ENCODING)
 
     def __len__(self) -> int:
         # Fetch the object length
-        object_length: typing.List[int] = self._json.objlen(ROOT_STRUCTURE + self._name, self._subpath)
+        object_length: typing.List[int] = self._json.objlen(self._absolute_name, self._subpath)
 
         # If object length is an empty list, raise a KeyError
         if not object_length:

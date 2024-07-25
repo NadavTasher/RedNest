@@ -10,15 +10,12 @@ from rednest.object import Nested, ROOT_STRUCTURE, CLASSES
 
 class Array(MutableSequence[typing.Any], Nested):
 
+    # Type globals
+    DEFAULT = []
+
     def _make_subpath(self, index: int) -> str:
         # Create and return a subpath
         return f"{self._subpath}[{index}]"
-
-    def _initialize_object(self) -> None:
-        # Make sure object is initialized
-        if not self._json.type(ROOT_STRUCTURE + self._name, self._subpath):
-            # Initialize sub-structure
-            self._json.set(ROOT_STRUCTURE + self._name, self._subpath, [])
 
     def __getitem__(self, index: typing.Union[int, slice]) -> typing.Union[typing.Any, typing.List[typing.Any]]:
         # If a slice is provided, return a list of items
@@ -27,7 +24,7 @@ class Array(MutableSequence[typing.Any], Nested):
             return [self[item_index] for item_index in range(*index.indices(len(self)))]
         elif isinstance(index, int):
             # Fetch the item type
-            item_type = self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(index))
+            item_type = self._json.type(self._absolute_name, self._make_subpath(index))
 
             # If the item type is None, the item is not set
             if not item_type:
@@ -41,7 +38,7 @@ class Array(MutableSequence[typing.Any], Nested):
                 return CLASSES[item_type](self._name, self._redis, self._make_subpath(index))
 
             # Fetch the item value
-            item_value, = self._json.get(ROOT_STRUCTURE + self._name, self._make_subpath(index))
+            item_value, = self._json.get(self._absolute_name, self._make_subpath(index))
 
             # Default - return the item value
             return item_value
@@ -73,7 +70,7 @@ class Array(MutableSequence[typing.Any], Nested):
                     self.insert(stop + counter, subvalue)
         elif isinstance(index, int):
             # Set the item in the database
-            self._json.set(ROOT_STRUCTURE + self._name, self._make_subpath(index), value)
+            self._json.set(self._absolute_name, self._make_subpath(index), value)
 
     def __delitem__(self, index: typing.Union[int, slice]) -> None:
         # If a slice is provided, splice the list
@@ -83,11 +80,11 @@ class Array(MutableSequence[typing.Any], Nested):
                 del self[subindex - counter]
         elif isinstance(index, int):
             # Delete the item from the database
-            self._json.delete(ROOT_STRUCTURE + self._name, self._make_subpath(index))
+            self._json.delete(self._absolute_name, self._make_subpath(index))
 
     def __len__(self) -> int:
         # Fetch the object length
-        object_length: typing.List[int] = self._json.arrlen(ROOT_STRUCTURE + self._name, self._subpath)
+        object_length: typing.List[int] = self._json.arrlen(self._absolute_name, self._subpath)
 
         # If object length is an empty list, raise a KeyError
         if not object_length:
@@ -123,7 +120,7 @@ class Array(MutableSequence[typing.Any], Nested):
 
     def insert(self, index: int, value: typing.Any) -> None:
         # Insert new array item
-        self._json.arrinsert(ROOT_STRUCTURE + self._name, self._subpath, index, value)
+        self._json.arrinsert(self._absolute_name, self._subpath, index, value)
 
     def copy(self) -> typing.List[typing.Any]:
         # Create initial bunch
