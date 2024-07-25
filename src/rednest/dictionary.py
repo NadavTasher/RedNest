@@ -20,6 +20,10 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
             self._json.set(ROOT_STRUCTURE + self._name, self._subpath, {})
 
     def __getitem__(self, key):
+        # Make sure key is a string
+        if not isinstance(key, str):
+            raise TypeError(type(key))
+
         # Fetch the item type
         item_type = self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(key))
 

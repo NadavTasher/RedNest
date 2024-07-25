@@ -1,4 +1,4 @@
-from collections.abc import MutableSequence
+from collections.abc import Sequence, MutableSequence
 
 from rednest.bunch import MutableAttributeMapping
 from rednest.mapping import AdvancedMutableMapping, Mapping
@@ -22,12 +22,24 @@ class RedisList(MutableSequence, RedisObject):
             self._json.set(ROOT_STRUCTURE + self._name, self._subpath, [])
 
     def __getitem__(self, index):
+        # If a slice is provided, return a list of items
+        if isinstance(index, slice):
+            # Fetch the range parameters
+            range_parameters = index.indices(len(self))
+
+            # Create a list with all of the requested items
+            return [self[item_index] for item_index in range(*range_parameters)]
+
+        # Make sure index is an integer
+        if not isinstance(index, int):
+            raise TypeError(type(index))
+
         # Fetch the item type
         item_type = self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(index))
 
         # If the item type is None, the item is not set
         if not item_type:
-            raise KeyError(index)
+            raise IndexError(index)
 
         # Untuple item type
         item_type, = item_type
@@ -68,13 +80,32 @@ class RedisList(MutableSequence, RedisObject):
         # Format the data like a dictionary
         return "[%s]" % ", ".join(repr(item) for item in self)
 
+    def __eq__(self, other):
+        # Make sure the other item is a mutable sequence
+        # NOTE: this can be Sequence but then __eq__ with a set / tuple of same value will pass.
+        if not isinstance(other, MutableSequence):
+            return False
+
+        # Make sure lengths are the same
+        if len(self) != len(other):
+            return False
+
+        # Loop and check all items
+        for index in range(len(self)):
+            # Compare items
+            if self[index] != other[index]:
+                return False
+
+        # Items match
+        return True
+
     def append(self, value):
         # Append new array item
-        self._json.arrappend(self._name, self._subpath, value)
+        self._json.arrappend(ROOT_STRUCTURE + self._name, self._subpath, value)
 
     def insert(self, index, value):
         # Insert new array item
-        self._json.arrinsert(self._name, self._subpath, index, value)
+        self._json.arrinsert(ROOT_STRUCTURE + self._name, self._subpath, index, value)
 
 
 # Registry object type
