@@ -14,8 +14,8 @@ class Nested(object):
     _subpath: str = None  # type: ignore
 
     # Type globals
-    DEFAULT = None
-    ENCODING = "utf-8"
+    DEFAULT: typing.Any = None
+    ENCODING: str = "utf-8"
 
     def __init__(self, name: str, redis: redis.Redis, subpath: str = OBJECT_BASE_PATH) -> None:
         # Set internal input parameters
@@ -34,7 +34,7 @@ class Nested(object):
     def _absolute_name(self) -> str:
         return ROOT_STRUCTURE + self._name
 
-    def _initialize(self):
+    def _initialize(self) -> None:
         # Make sure the root structure exists
         if not self._json.type(ROOT_STRUCTURE, OBJECT_BASE_PATH):
             # Initialize the root object
