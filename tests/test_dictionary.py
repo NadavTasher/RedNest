@@ -151,6 +151,14 @@ def test_clear(dictionary):
         assert not other
 
 
+def test_setdefaults(dictionary):
+    # Set some values
+    dictionary.setdefaults({"a": "b"}, c="d")
+
+    # Check dictionary structure
+    assert dictionary == {"a": "b", "c": "d"}
+
+
 def test_bunch_mode(dictionary):
     # Assign values
     dictionary.test_value = 10

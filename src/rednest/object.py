@@ -1,10 +1,6 @@
 import redis
 import typing
 
-# ReJSON magics
-ROOT_STRUCTURE = "."
-OBJECT_BASE_PATH = "$"
-
 
 class Nested(object):
 
@@ -17,7 +13,7 @@ class Nested(object):
     DEFAULT: typing.Any = None
     ENCODING: str = "utf-8"
 
-    def __init__(self, name: str, redis: redis.Redis, subpath: str = OBJECT_BASE_PATH) -> None:
+    def __init__(self, name: str, redis: redis.Redis, subpath: str = "$") -> None:
         # Set internal input parameters
         self._name = name
         self._redis = redis
@@ -32,14 +28,9 @@ class Nested(object):
 
     @property
     def _absolute_name(self) -> str:
-        return ROOT_STRUCTURE + self._name
+        return f".{self._name}"
 
     def _initialize(self) -> None:
-        # Make sure the root structure exists
-        if not self._json.type(ROOT_STRUCTURE, OBJECT_BASE_PATH):
-            # Initialize the root object
-            self._json.set(ROOT_STRUCTURE, OBJECT_BASE_PATH, {})
-
         # Initialize a default value if required
         if not self._json.type(self._absolute_name, self._subpath):
             # Initialize sub-structure

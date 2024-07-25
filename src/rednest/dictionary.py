@@ -5,7 +5,7 @@ import contextlib
 from collections.abc import MutableMapping, Mapping
 
 # Import the abstract object
-from rednest.object import Nested, ROOT_STRUCTURE, CLASSES
+from rednest.object import Nested, CLASSES
 
 # Create default object so that None can be used as default value
 DEFAULT = object()

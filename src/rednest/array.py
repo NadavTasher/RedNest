@@ -5,7 +5,7 @@ import contextlib
 from collections.abc import Sequence, MutableSequence
 
 # Import the abstract object
-from rednest.object import Nested, ROOT_STRUCTURE, CLASSES
+from rednest.object import Nested, CLASSES
 
 
 class Array(MutableSequence[typing.Any], Nested):
