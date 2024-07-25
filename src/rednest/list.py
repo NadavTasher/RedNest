@@ -1,12 +1,10 @@
-from collections.abc import Sequence, MutableSequence
+import contextlib
 
-from rednest.bunch import MutableAttributeMapping
-from rednest.mapping import AdvancedMutableMapping, Mapping
+# Import abstract types
+from collections.abc import MutableSequence
 
-from rednest.object import RedisObject, ROOT_STRUCTURE, OBJECT_BASE_PATH
-
-# Create default object so that None can be used as default value
-DEFAULT = object()
+# Import the abstract object
+from rednest.object import RedisObject, ROOT_STRUCTURE
 
 
 class RedisList(MutableSequence, RedisObject):
@@ -99,13 +97,25 @@ class RedisList(MutableSequence, RedisObject):
         # Items match
         return True
 
-    def append(self, value):
-        # Append new array item
-        self._json.arrappend(ROOT_STRUCTURE + self._name, self._subpath, value)
-
     def insert(self, index, value):
         # Insert new array item
         self._json.arrinsert(ROOT_STRUCTURE + self._name, self._subpath, index, value)
+
+    def copy(self):
+        # Create initial bunch
+        output = list()
+
+        # Loop over keys
+        for value in self:
+            # Try copying the value
+            with contextlib.suppress(AttributeError):
+                value = value.copy()
+
+            # Update the bunch
+            output.append(value)
+
+        # Return the created output
+        return output
 
 
 # Registry object type

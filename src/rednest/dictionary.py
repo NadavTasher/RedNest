@@ -1,13 +1,16 @@
-from rednest.bunch import MutableAttributeMapping
-from rednest.mapping import AdvancedMutableMapping, Mapping
+import contextlib
 
-from rednest.object import RedisObject, ROOT_STRUCTURE, OBJECT_BASE_PATH
+# Import abstract types
+from collections.abc import MutableMapping, Mapping
+
+# Import the abstract object
+from rednest.object import RedisObject, ROOT_STRUCTURE
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
 
 
-class RedisDictionary(AdvancedMutableMapping, RedisObject):
+class RedisDictionary(MutableMapping, RedisObject):
 
     def _make_subpath(self, key):
         # Create and return a subpath
@@ -144,8 +147,8 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
             # Fetch value of key
             value = self[key]
 
-            # Check if value is a keystore
-            if isinstance(value, Mapping):
+            # Try copying the value
+            with contextlib.suppress(AttributeError):
                 value = value.copy()
 
             # Update the bunch
@@ -154,11 +157,14 @@ class RedisDictionary(AdvancedMutableMapping, RedisObject):
         # Return the created output
         return output
 
-    def clear(self):
-        # Loop over keys
-        for key in self:
-            # Delete the item
-            del self[key]
+    def setdefaults(self, *dictionaries, **values):
+        # Update values to include all dicts
+        for dictionary in dictionaries:
+            values.update(dictionary)
+
+        # Loop over all items and set the default value
+        for key, value in values.items():
+            self.setdefault(key, value)
 
 
 # Registry object type
