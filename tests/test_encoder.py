@@ -15,7 +15,7 @@ def test_dict_encoding(dictionary):
     assert json.dumps(dictionary)
 
 
-def test_list_encoding(array):
+def test_array_encoding(array):
     # Insert to list
     for x in range(10):
         array.append(x)

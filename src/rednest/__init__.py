@@ -1,6 +1,6 @@
 # Import redis encoder
-from rednest.encoder import RedisEncoder
+from rednest.encoder import Encoder
 
 # Import redis objects
-from rednest.list import RedisList
-from rednest.dictionary import RedisDictionary
+from rednest.array import Array
+from rednest.dictionary import Dictionary

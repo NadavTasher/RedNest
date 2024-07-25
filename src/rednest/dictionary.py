@@ -1,28 +1,31 @@
+import typing
 import contextlib
 
 # Import abstract types
 from collections.abc import MutableMapping, Mapping
 
 # Import the abstract object
-from rednest.object import RedisObject, ROOT_STRUCTURE
+from rednest.object import Nested, ROOT_STRUCTURE, CLASSES
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
 
 
-class RedisDictionary(MutableMapping, RedisObject):
+class Dictionary(MutableMapping[str, typing.Any], Nested):
 
-    def _make_subpath(self, key):
+    BUNCH = True
+
+    def _make_subpath(self, key: str) -> str:
         # Create and return a subpath
         return f"{self._subpath}.{key}"
 
-    def _initialize_object(self):
+    def _initialize_object(self) -> None:
         # Make sure object is initialized
         if not self._json.type(ROOT_STRUCTURE + self._name, self._subpath):
             # Initialize sub-structure
             self._json.set(ROOT_STRUCTURE + self._name, self._subpath, {})
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> typing.Any:
         # Make sure key is a string
         if not isinstance(key, str):
             raise TypeError(type(key))
@@ -35,11 +38,11 @@ class RedisDictionary(MutableMapping, RedisObject):
             raise KeyError(key)
 
         # Untuple item type
-        item_type, = item_type
+        item_type_value, = item_type
 
         # Return different types as needed
-        if item_type in RedisObject._OBJECT_CLASSES:
-            return RedisObject._OBJECT_CLASSES[item_type](self._name, self._redis, self._make_subpath(key))
+        if item_type_value in CLASSES:
+            return CLASSES[item_type_value](self._name, self._redis, self._make_subpath(key))
 
         # Fetch the item value
         item_value, = self._json.get(ROOT_STRUCTURE + self._name, self._make_subpath(key))
@@ -47,19 +50,19 @@ class RedisDictionary(MutableMapping, RedisObject):
         # Default - return the item value
         return item_value
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: typing.Any) -> None:
         # Set the item in the database
         self._json.set(ROOT_STRUCTURE + self._name, self._make_subpath(key), value)
 
-    def __delitem__(self, key):
+    def __delitem__(self, key: str) -> None:
         # Delete the item from the database
         self._json.delete(ROOT_STRUCTURE + self._name, self._make_subpath(key))
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:  # type: ignore[override]
         # Make sure key exists in database
         return bool(self._json.type(ROOT_STRUCTURE + self._name, self._make_subpath(key)))
 
-    def __iter__(self):
+    def __iter__(self) -> typing.Iterator[str]:
         # Fetch the object keys
         object_keys, = self._json.objkeys(ROOT_STRUCTURE + self._name, self._subpath)
 
@@ -67,25 +70,25 @@ class RedisDictionary(MutableMapping, RedisObject):
         for object_key in object_keys:
             yield object_key.decode(self._encoding)
 
-    def __len__(self):
+    def __len__(self) -> int:
         # Fetch the object length
-        object_length = self._json.objlen(ROOT_STRUCTURE + self._name, self._subpath)
+        object_length: typing.List[int] = self._json.objlen(ROOT_STRUCTURE + self._name, self._subpath)
 
         # If object length is an empty list, raise a KeyError
         if not object_length:
             raise KeyError(self._subpath)
 
         # Untuple the result
-        object_length, = object_length
+        object_length_value, = object_length
 
         # Return the object length
-        return object_length
+        return object_length_value
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         # Format the data like a dictionary
         return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
 
-    def __eq__(self, other):
+    def __eq__(self, other: typing.Any) -> bool:
         # Make sure the other object is a mapping
         if not isinstance(other, Mapping):
             return False
@@ -94,21 +97,22 @@ class RedisDictionary(MutableMapping, RedisObject):
         if set(self.keys()) != set(other.keys()):
             return False
 
-        # Make sure all the values equal
+        # Loop over all keys
         for key in self:
+            # Check whether the value equals
             if self[key] != other[key]:
                 return False
 
         # Comparison succeeded
         return True
 
-    def pop(self, key, default=DEFAULT):
+    def pop(self, key: str, default: typing.Any = DEFAULT) -> typing.Any:
         try:
             # Fetch the original value
             value = self[key]
 
-            # Check if the value is a keystore
-            if isinstance(value, Mapping):
+            # Try copying the value
+            with contextlib.suppress(AttributeError):
                 value = value.copy()
 
             # Delete the item
@@ -124,7 +128,7 @@ class RedisDictionary(MutableMapping, RedisObject):
             # Reraise exception
             raise
 
-    def popitem(self):
+    def popitem(self) -> typing.Tuple[str, typing.Any]:
         # Convert self to list
         keys = list(self)
 
@@ -138,7 +142,7 @@ class RedisDictionary(MutableMapping, RedisObject):
         # Return the key and the value
         return key, self.pop(key)
 
-    def copy(self):
+    def copy(self) -> typing.Dict[str, typing.Any]:
         # Create initial bunch
         output = dict()
 
@@ -157,7 +161,7 @@ class RedisDictionary(MutableMapping, RedisObject):
         # Return the created output
         return output
 
-    def setdefaults(self, *dictionaries, **values):
+    def setdefaults(self, *dictionaries: typing.Dict[str, typing.Any], **values: typing.Dict[str, typing.Any]) -> None:
         # Update values to include all dicts
         for dictionary in dictionaries:
             values.update(dictionary)
@@ -166,6 +170,45 @@ class RedisDictionary(MutableMapping, RedisObject):
         for key, value in values.items():
             self.setdefault(key, value)
 
+    # If bunch mode is enabled (on by default, define some more functions)
+    if BUNCH:
+
+        def __getattr__(self, key: str) -> typing.Any:
+            try:
+                print(key)
+                return object.__getattribute__(self, key)
+            except AttributeError:
+                # Key is not in prototype chain, try returning
+                try:
+                    return self[key]
+                except KeyError:
+                    # Replace KeyErrors with AttributeErrors
+                    raise AttributeError(key)
+
+        def __setattr__(self, key: str, value: typing.Any) -> None:
+            try:
+                object.__getattribute__(self, key)
+            except AttributeError:
+                # Set the item
+                self[key] = value
+            else:
+                # Key is in prototype chain, set it
+                object.__setattr__(self, key, value)
+
+        def __delattr__(self, key: str) -> None:
+            try:
+                object.__getattribute__(self, key)
+            except AttributeError:
+                # Delete the item
+                try:
+                    del self[key]
+                except KeyError:
+                    # Replace KeyErrors with AttributeErrors
+                    raise AttributeError(key)
+            else:
+                # Key is in prototype chain, delete it
+                object.__delattr__(self, key)
+
 
 # Registry object type
-RedisObject._OBJECT_CLASSES[b"object"] = RedisDictionary
+CLASSES[b"object"] = Dictionary

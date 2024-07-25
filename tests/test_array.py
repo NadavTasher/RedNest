@@ -1,17 +1,19 @@
-from rednest import RedisList
+import pytest
+
+from rednest import Array
 
 from test_utilities import dictionary, array
 
 
-def test_list_create(dictionary):
+def test_array_create(dictionary):
     # Create the list type
     dictionary["Test"] = [1, 2, 3]
 
     # Make sure list is created
-    assert isinstance(dictionary["Test"], RedisList)
+    assert isinstance(dictionary["Test"], Array)
 
 
-def test_list_append(array):
+def test_array_append(array):
     # Set array items
     array.append(1)
     array.append(2)
@@ -23,7 +25,7 @@ def test_list_append(array):
     assert array[2] == 3
 
 
-def test_list_contains(array):
+def test_array_contains(array):
     # Set array items
     array.append(1)
 
@@ -32,7 +34,7 @@ def test_list_contains(array):
     assert 4 not in array
 
 
-def test_list_delete(array):
+def test_array_delete(array):
     # Set array items
     array.append(1)
 
@@ -42,7 +44,7 @@ def test_list_delete(array):
     assert 1 not in array
 
 
-def test_list_pop(array):
+def test_array_pop(array):
     # Set array items
     array.append(1)
     array.append(2)
@@ -56,7 +58,7 @@ def test_list_pop(array):
     assert len(array) == 1
 
 
-def test_list_insert(array):
+def test_array_insert(array):
     # Set array items
     array.append(1)
     array.append(2)
@@ -72,13 +74,44 @@ def test_list_insert(array):
     assert array[1] == 8
 
 
-def test_list_slice(array):
+def test_array_slice(array):
     # Insert to list
     for index in range(10):
         array.append(index)
 
     # Check slice
     assert array[3:6] == [3, 4, 5]
+
+    # Delete slice
+    del array[2:5]
+
+    # Check slice
+    assert array == [0, 1, 5, 6, 7, 8, 9]
+
+    # Set slice
+    array[3:6] = range(6)
+
+    # Check slice
+    assert array == [0, 1, 5, 0, 1, 2, 3, 4, 5, 9]
+
+    # Get extended slices
+    assert array[3:8:2] == [0, 2, 4]
+
+    # Delete extended slices
+    del array[3:8:2]
+
+    # Check deleted slice
+    assert array == [0, 1, 5, 1, 3, 5, 9]
+
+    # Insert extended slice (should fail)
+    with pytest.raises(ValueError):
+        array[2:9:3] = range(10)
+
+    # Insert extended slice
+    array[2:9:3] = range(90, 92)
+
+    # Make sure the array is as expected
+    assert array == [0, 1, 90, 1, 3, 91, 9]
 
 
 def test_negative_index(array):
@@ -101,8 +134,10 @@ def test_equals(array):
     assert array != [2, 3]
     assert array != None
     assert array != [2, 3, 4]
-    assert array != (1, 2, 3)
     assert array == [1, 2, 3]
+
+    # This is a convenient feature, regular lists don't do this.
+    assert array == (1, 2, 3)
 
 
 def test_assignment(array):

@@ -13,7 +13,7 @@ def dictionary(request):
     rand_name = os.urandom(4).hex()
 
     # Create a random dictionary
-    return RedisDictionary(rand_name, REDIS)
+    return Dictionary(rand_name, REDIS)
 
 
 @pytest.fixture()
@@ -22,4 +22,4 @@ def array(request):
     rand_name = os.urandom(4).hex()
 
     # Create a random dictionary
-    return RedisList(rand_name, REDIS)
+    return Array(rand_name, REDIS)

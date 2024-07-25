@@ -37,7 +37,7 @@ def test_write_recursive_dicts(dictionary):
     assert dictionary["Hello"] == dict(World=42)
 
     # Make sure the Hello value is a dictionary
-    assert isinstance(dictionary["Hello"], RedisDictionary)
+    assert isinstance(dictionary["Hello"], Dictionary)
 
 
 def test_len(dictionary):
@@ -149,3 +149,23 @@ def test_clear(dictionary):
     # Make sure other does not exist
     with pytest.raises(KeyError):
         assert not other
+
+
+def test_bunch_mode(dictionary):
+    # Assign values
+    dictionary.test_value = 10
+
+    # Make sure the item was written
+    assert dictionary["test_value"] == 10
+
+    # Set another value
+    dictionary["another"] = 5
+
+    # Try getting the value
+    assert dictionary.another == 5
+
+    # Try deleting the value
+    del dictionary.another
+
+    # Check final dictionary values
+    assert dictionary == {"test_value": 10}
