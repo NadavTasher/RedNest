@@ -2,7 +2,7 @@ import typing
 import contextlib
 
 # Import abstract types
-from collections.abc import MutableMapping, Mapping
+from collections.abc import Mapping
 
 # Import the abstract object
 from rednest.object import Nested, CLASSES
@@ -11,7 +11,7 @@ from rednest.object import Nested, CLASSES
 DEFAULT = object()
 
 
-class Dictionary(MutableMapping[str, typing.Any], Nested):
+class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
     # Bunch mode switch
     BUNCH = True

@@ -2,13 +2,13 @@ import typing
 import contextlib
 
 # Import abstract types
-from collections.abc import Sequence, MutableSequence
+from collections.abc import Sequence
 
 # Import the abstract object
 from rednest.object import Nested, CLASSES
 
 
-class Array(MutableSequence[typing.Any], Nested):
+class Array(typing.MutableSequence[typing.Any], Nested):
 
     # Type globals
     DEFAULT = []

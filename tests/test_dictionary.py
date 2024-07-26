@@ -159,6 +159,14 @@ def test_setdefaults(dictionary):
     assert dictionary == {"a": "b", "c": "d"}
 
 
+def test_update(dictionary):
+    # Set some values
+    dictionary.update({"a": "b"}, c="d")
+
+    # Check dictionary structure
+    assert dictionary == {"a": "b", "c": "d"}
+
+
 def test_bunch_mode(dictionary):
     # Assign values
     dictionary.test_value = 10
