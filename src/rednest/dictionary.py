@@ -67,7 +67,12 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
         # Loop over keys and decode them
         for object_key in object_keys:
-            yield object_key.decode(self.ENCODING)
+            # Decode the object if needed
+            if isinstance(object_key, bytes):
+                object_key = object_key.decode(self.ENCODING)
+
+            # Yield the object key
+            yield object_key
 
     def __len__(self) -> int:
         # Fetch the object length
