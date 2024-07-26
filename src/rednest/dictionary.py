@@ -1,3 +1,4 @@
+import json
 import typing
 import contextlib
 
@@ -21,7 +22,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
     def _make_subpath(self, key: str) -> str:
         # Create and return a subpath
-        return f"{self._subpath}.{key}"
+        return f"{self._subpath}[{json.dumps(key)}]"
 
     def __getitem__(self, key: str) -> typing.Any:
         # Make sure key is a string
