@@ -39,6 +39,10 @@ def test_write_recursive_dicts(dictionary):
     # Make sure the Hello value is a dictionary
     assert isinstance(dictionary["Hello"], Dictionary)
 
+    # Check nested bunching
+    dictionary.Hello.Test = {"Value": 90}
+    assert dictionary.Hello.Test.Value == 90
+
 
 def test_len(dictionary):
     # Make sure dictionary is empty
