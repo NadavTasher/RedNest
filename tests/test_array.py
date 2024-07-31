@@ -13,6 +13,14 @@ def test_array_create(dictionary):
     assert isinstance(dictionary["Test"], Array)
 
 
+def test_nested_arrays(array):
+    # Set subarray
+    array.append([0, 1, 2, 3])
+
+    # Make sure list is created
+    assert isinstance(array[0], Array)
+
+
 def test_array_append(array):
     # Set array items
     array.append(1)
@@ -42,6 +50,10 @@ def test_array_delete(array):
     assert 1 in array
     del array[0]
     assert 1 not in array
+
+    # Delete non-existent item
+    with pytest.raises(IndexError):
+        del array[0]
 
 
 def test_array_pop(array):

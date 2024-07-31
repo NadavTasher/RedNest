@@ -6,7 +6,7 @@ import contextlib
 from collections.abc import Mapping
 
 # Import the abstract object
-from rednest.object import Nested, CLASSES
+from rednest.nested import Nested, NESTED_TYPES
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
@@ -29,33 +29,16 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
         if not isinstance(key, str):
             raise TypeError(type(key))
 
-        # Fetch the item type
-        item_type = self._json.type(self._absolute_name, self._make_subpath(key))
-
-        # If the item type is None, the item is not set
-        if not item_type:
-            raise KeyError(key)
-
-        # Untuple item type
-        item_type_value, = item_type
-
-        # Return different types as needed
-        if item_type_value in CLASSES:
-            return CLASSES[item_type_value](self._name, self._redis, self._make_subpath(key))
-
-        # Fetch the item value
-        item_value, = self._json.get(self._absolute_name, self._make_subpath(key))
-
-        # Default - return the item value
-        return item_value
+        # Get using subvalue
+        return self._fetch_value(self._make_subpath(key), KeyError(key))
 
     def __setitem__(self, key: str, value: typing.Any) -> None:
-        # Set the item in the database
-        self._json.set(self._absolute_name, self._make_subpath(key), value)
+        # Set using subvalue
+        self._update_value(self._make_subpath(key), value)
 
     def __delitem__(self, key: str) -> None:
         # Delete the item from the database
-        self._json.delete(self._absolute_name, self._make_subpath(key))
+        self._delete_value(self._make_subpath(key), KeyError(key))
 
     def __contains__(self, key: str) -> bool:  # type: ignore[override]
         # Make sure key exists in database
@@ -215,4 +198,4 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
 
 # Registry object type
-CLASSES[b"object"] = Dictionary
+NESTED_TYPES[b"object"] = (Dictionary, dict)

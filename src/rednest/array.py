@@ -5,7 +5,7 @@ import contextlib
 from collections.abc import Sequence
 
 # Import the abstract object
-from rednest.object import Nested, CLASSES
+from rednest.nested import Nested, NESTED_TYPES
 
 
 class Array(typing.MutableSequence[typing.Any], Nested):
@@ -23,25 +23,8 @@ class Array(typing.MutableSequence[typing.Any], Nested):
             # Create a list with all of the requested items
             return [self[item_index] for item_index in range(*index.indices(len(self)))]
         elif isinstance(index, int):
-            # Fetch the item type
-            item_type = self._json.type(self._absolute_name, self._make_subpath(index))
-
-            # If the item type is None, the item is not set
-            if not item_type:
-                raise IndexError(index)
-
-            # Untuple item type
-            item_type, = item_type
-
-            # Return different types as needed
-            if item_type in CLASSES:
-                return CLASSES[item_type](self._name, self._redis, self._make_subpath(index))
-
-            # Fetch the item value
-            item_value, = self._json.get(self._absolute_name, self._make_subpath(index))
-
-            # Default - return the item value
-            return item_value
+            # Return using subvalue
+            return self._fetch_value(self._make_subpath(index), IndexError(index))
 
         # Input type error
         raise TypeError("Array index must be an int or a slice")
@@ -69,8 +52,8 @@ class Array(typing.MutableSequence[typing.Any], Nested):
                 for counter, subvalue in enumerate(iterator):
                     self.insert(stop + counter, subvalue)
         elif isinstance(index, int):
-            # Set the item in the database
-            self._json.set(self._absolute_name, self._make_subpath(index), value)
+            # Set using subvalue
+            self._update_value(self._make_subpath(index), value)
 
     def __delitem__(self, index: typing.Union[int, slice]) -> None:
         # If a slice is provided, splice the list
@@ -80,7 +63,7 @@ class Array(typing.MutableSequence[typing.Any], Nested):
                 del self[subindex - counter]
         elif isinstance(index, int):
             # Delete the item from the database
-            self._json.delete(self._absolute_name, self._make_subpath(index))
+            self._delete_value(self._make_subpath(index), IndexError(index))
 
     def __len__(self) -> int:
         # Fetch the object length
@@ -140,4 +123,4 @@ class Array(typing.MutableSequence[typing.Any], Nested):
 
 
 # Registry object type
-CLASSES[b"array"] = Array
+NESTED_TYPES[b"array"] = (Array, list)

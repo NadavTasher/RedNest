@@ -29,6 +29,18 @@ def test_write_read_has_delete(dictionary):
         assert dictionary["Hello"] == "World"
 
 
+def test_write_read_random_types(dictionary):
+    # Write some random types
+    dictionary["Tuple"] = (0, 1, 2, 3)
+    dictionary["Bytes"] = b"AAAA\x00BBBB"
+    dictionary["ByteArray"] = bytearray(range(100))
+
+    # Make sure these types are valid now
+    assert dictionary["Tuple"] == (0, 1, 2, 3)
+    assert dictionary["Bytes"] == b"AAAA\x00BBBB"
+    assert dictionary["ByteArray"] == bytearray(range(100))
+
+
 def test_write_recursive_dicts(dictionary):
     # Write the Hello value
     dictionary["Hello"] = {"World": 42}
@@ -131,6 +143,10 @@ def test_delete(dictionary):
     # Make sure persistent value exists
     assert "Persistent" in dictionary
     assert dictionary["Persistent"] == "Test"
+
+    # Try deleting a non-existent value
+    with pytest.raises(KeyError):
+        del dictionary["Non-Existent"]
 
 
 def test_clear(dictionary):
