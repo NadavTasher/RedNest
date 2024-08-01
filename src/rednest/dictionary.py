@@ -162,7 +162,6 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
         def __getattr__(self, key: str) -> typing.Any:
             try:
-                print(key)
                 return object.__getattribute__(self, key)
             except AttributeError:
                 # Key is not in prototype chain, try returning
