@@ -197,4 +197,4 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
 
 # Registry object type
-NESTED_TYPES[b"object"] = (Dictionary, dict)
+NESTED_TYPES["object"] = (Dictionary, dict)

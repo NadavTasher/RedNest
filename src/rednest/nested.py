@@ -47,6 +47,10 @@ class Nested(object):
         # Untuple item type
         item_type_value, = item_type
 
+        # Decode the item type if needed
+        if isinstance(item_type_value, bytes):
+            item_type_value = item_type_value.decode(self.ENCODING)
+
         # Return different types as needed
         if item_type_value in NESTED_TYPES:
             # Fetch the conversion type
@@ -81,4 +85,4 @@ class Nested(object):
 
 
 # Nested object types
-NESTED_TYPES: typing.Dict[typing.ByteString, typing.Tuple[typing.Type[Nested], typing.Type[typing.Any]]] = dict()
+NESTED_TYPES: typing.Dict[str, typing.Tuple[typing.Type[Nested], typing.Type[typing.Any]]] = dict()

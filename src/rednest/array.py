@@ -123,4 +123,4 @@ class Array(typing.MutableSequence[typing.Any], Nested):
 
 
 # Registry object type
-NESTED_TYPES[b"array"] = (Array, list)
+NESTED_TYPES["array"] = (Array, list)
