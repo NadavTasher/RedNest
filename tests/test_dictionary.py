@@ -55,6 +55,18 @@ def test_write_recursive_dicts(dictionary):
     dictionary.Hello.Test = {"Value": 90}
     assert dictionary.Hello.Test.Value == 90
 
+    # Test nesting
+    assert isinstance(dictionary.Hello.Test, Dictionary)
+
+    # Setdefault with empty dict
+    dictionary.setdefault("Test", dict())
+
+    # Make sure subdict is a dictionary
+    assert isinstance(dictionary.Test, Dictionary)
+
+    # Check type of subdict
+    assert type(dictionary.Test) == Dictionary
+
 
 def test_len(dictionary):
     # Make sure dictionary is empty
