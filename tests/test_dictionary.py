@@ -67,6 +67,9 @@ def test_write_recursive_dicts(dictionary):
     # Check type of subdict
     assert type(dictionary.Test) == Dictionary
 
+    # Test setdefaults on subdictionary
+    dictionary["Test"].setdefaults(a=1)
+
 
 def test_len(dictionary):
     # Make sure dictionary is empty
