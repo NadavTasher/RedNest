@@ -197,8 +197,7 @@ def test_clear(dictionary):
     assert not dictionary
 
     # Make sure other does not exist
-    with pytest.raises(KeyError):
-        assert not other
+    assert not other
 
 
 def test_setdefaults(dictionary):

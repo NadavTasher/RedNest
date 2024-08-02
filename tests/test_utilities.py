@@ -6,6 +6,7 @@ from rednest import Array, Dictionary
 
 redis_connections = [redis.Redis(), redis.Redis(decode_responses=True)]
 
+
 @pytest.fixture(params=redis_connections)
 def dictionary(request):
     # Generate random name

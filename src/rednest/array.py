@@ -1,41 +1,65 @@
+import os
 import typing
 import contextlib
 
 # Import abstract types
-from collections.abc import Sequence
+from collections.abc import Sequence, Iterable
 
-# Import the abstract object
-from rednest.nested import Nested, REDIS_TYPE_MAPPING, NESTED_TYPE_MAPPING
+# Import extension objects
+from rednest.nested import Nested, NestedType, NESTED_TYPES
 
 
 class Array(typing.MutableSequence[typing.Any], Nested):
 
-    def _initialize(self, initial: typing.Optional[typing.Container[typing.Any]]) -> None:
-        # Initialize a default value if required
-        if (initial is not None) or (not self._json_module.type(self._absolute_name, self._subpath)):
-            # Initialize sub-structure
-            self._json_module.set(self._absolute_name, self._subpath, [])
+    def _initialize(self, initial: typing.Optional[typing.List[typing.Any]]) -> None:
+        # Make sure initial value is defined
+        if initial is None:
+            return
 
-        # Insert with given items if required
-        if (initial is not None):
-            # Insert to the list
-            self[:] = initial
+        # Delete existing value if defined
+        if self._redis.exists(self._key):
+            self._redis.delete(self._key)
 
-    def _make_subpath(self, index: int) -> str:
-        # Create and return a subpath
-        return f"{self._subpath}[{index}]"
+        # Update the list
+        self[:] = initial
+
+    def _identifier_from_index(self, index: int) -> typing.Union[str, bytes]:
+        # Request the list at slice index->index
+        identifier_response = self._redis.lrange(self._key, index, index)
+
+        # If the response is empty, item does not exist
+        if not identifier_response:
+            raise IndexError(index)
+
+        # Make sure the identifier response is a list
+        if not isinstance(identifier_response, Iterable):
+            raise TypeError(identifier_response)
+
+        # Fetch the only item in the response
+        identifier, = identifier_response
+
+        # Make sure the identifier is a string or bytes
+        if not isinstance(identifier, (str, bytes)):
+            raise TypeError(identifier)
+
+        # Return the identifier
+        return identifier
 
     def __getitem__(self, index: typing.Union[int, slice]) -> typing.Union[typing.Any, typing.List[typing.Any]]:
         # If a slice is provided, return a list of items
         if isinstance(index, slice):
             # Create a list with all of the requested items
             return [self[item_index] for item_index in range(*index.indices(len(self)))]
-        elif isinstance(index, int):
-            # Return using subvalue
-            return self._get_item(self._make_subpath(index), IndexError(index))
 
-        # Input type error
-        raise TypeError("Array index must be an int or a slice")
+        # If index is negative, add the length to it
+        if index < 0:
+            index += len(self)
+
+        # Fetch the identifier
+        identifier = self._identifier_from_index(index)
+
+        # Return the nested value
+        return self._fetch_by_identifier(identifier)
 
     def __setitem__(self, index: typing.Union[int, slice], value: typing.Union[typing.Any, typing.Sequence[typing.Any]]) -> None:
         # If a slice is provided, splice the list
@@ -59,9 +83,23 @@ class Array(typing.MutableSequence[typing.Any], Nested):
                 # Loop over remaining items and insert them
                 for counter, subvalue in enumerate(iterator):
                     self.insert(stop + counter, subvalue)
-        elif isinstance(index, int):
-            # Set using subvalue
-            self._set_item(self._make_subpath(index), value)
+
+            # Nothing more to do
+            return
+
+        # If index is negative, add the length to it
+        if index < 0:
+            index += len(self)
+
+        # Fetch the identifier
+        original_identifier = self._identifier_from_index(index)
+
+        # Generate the item value and set it
+        with self._create_identifier_from_value(value) as identifier:
+            self._redis.lset(self._key, index, identifier)
+
+        # Delete the original nested value
+        self._delete_by_identifier(original_identifier)
 
     def __delitem__(self, index: typing.Union[int, slice]) -> None:
         # If a slice is provided, splice the list
@@ -69,23 +107,47 @@ class Array(typing.MutableSequence[typing.Any], Nested):
             # Delete all required items
             for counter, subindex in enumerate(range(*index.indices(len(self)))):
                 del self[subindex - counter]
-        elif isinstance(index, int):
-            # Delete the item from the database
-            self._delete_item(self._make_subpath(index), IndexError(index))
+
+            # Nothing more to do
+            return
+
+        # If index is negative, add the length to it
+        if index < 0:
+            index += len(self)
+
+        # Fetch the identifier
+        identifier = self._identifier_from_index(index)
+
+        # Check if index is the first item
+        if index == 0:
+            # Index 0 == lpop
+            self._redis.lpop(self._key, 1)
+        elif index == len(self) - 1:
+            # Index -1 == rpop
+            self._redis.rpop(self._key, 1)
+        else:
+            # Generate a temporary value
+            temporary_value = os.urandom(64).hex()
+
+            # Set the temporary value at the current index
+            self._redis.lset(self._key, index, temporary_value)
+
+            # Delete the item with the temporary value from the list
+            self._redis.lrem(self._key, 1, temporary_value)
+
+        # Delete the original nested object
+        self._delete_by_identifier(identifier)
 
     def __len__(self) -> int:
-        # Fetch the object length
-        object_length = self._json_module.arrlen(self._absolute_name, self._subpath)
+        # Fetch the list length
+        length = self._redis.llen(self._key)
 
-        # If object length is an empty list, raise a KeyError
-        if not object_length:
-            raise KeyError(self._subpath)
+        # Make sure the length is an integer
+        if not isinstance(length, int):
+            raise TypeError(length)
 
-        # Untuple the result
-        object_length_value, = object_length
-
-        # Return the object length
-        return int(object_length_value)
+        # Return the length
+        return length
 
     def __repr__(self) -> str:
         # Format the data like a dictionary
@@ -110,11 +172,40 @@ class Array(typing.MutableSequence[typing.Any], Nested):
         return True
 
     def insert(self, index: int, value: typing.Any) -> None:
-        # Insert new array item
-        self._json_module.arrinsert(self._absolute_name, self._subpath, index, None)
+        # If index is negative, add the length to it
+        if index < 0:
+            index += len(self)
 
-        # Set the item
-        self[index] = value
+        # Check whether the index is 0
+        if index == 0:
+            # Insert 0 == lpush
+            with self._create_identifier_from_value(value) as identifier:
+                self._redis.lpush(self._key, identifier)
+        elif index == len(self):
+            # Insert -1 == rpush
+            with self._create_identifier_from_value(value) as identifier:
+                self._redis.rpush(self._key, identifier)
+        else:
+            # Fetch the identifier
+            original_identifier = self._identifier_from_index(index)
+
+            # Make sure the original identifier is a string
+            if not isinstance(original_identifier, str):
+                original_identifier = original_identifier.decode(self.ENCODING)
+
+            # Generate a temporary value
+            temporary_value = os.urandom(64).hex()
+
+            # Create the new value already
+            with self._create_identifier_from_value(value) as identifier:
+                # Set the temporary value at the current index
+                self._redis.lset(self._key, index, temporary_value)
+
+                # Insert the new item before the temporary item
+                self._redis.linsert(self._key, "before", temporary_value, identifier)
+
+                # Restore the original value at the required index
+                self._redis.lset(self._key, index + 1, original_identifier)
 
     def copy(self) -> typing.List[typing.Any]:
         # Create initial bunch
@@ -133,6 +224,5 @@ class Array(typing.MutableSequence[typing.Any], Nested):
         return output
 
 
-# Registry object type
-REDIS_TYPE_MAPPING["array"] = Array
-NESTED_TYPE_MAPPING[list] = Array
+# Extend nested types with list
+NESTED_TYPES.append(NestedType("list", Array, list))

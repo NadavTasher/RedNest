@@ -1,83 +1,112 @@
-import json
 import typing
 import contextlib
 
 # Import abstract types
-from collections.abc import Mapping
+from collections.abc import Mapping, Iterable
 
-# Import the abstract object
-from rednest.nested import Nested, REDIS_TYPE_MAPPING, NESTED_TYPE_MAPPING
+# Import extension objects
+from rednest.nested import Nested, NestedType, NESTED_TYPES
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
 
 
-class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
+class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
     # Bunch mode switch
     BUNCH = True
 
-    def _initialize(self, initial: typing.Optional[typing.Mapping[str, typing.Any]]) -> None:
-        # Initialize a default value if required
-        if (initial is not None) or (not self._json_module.type(self._absolute_name, self._subpath)):
-            # Initialize sub-structure
-            self._json_module.set(self._absolute_name, self._subpath, {})
+    def _initialize(self, initial: typing.Optional[typing.Dict[typing.Any, typing.Any]]) -> None:
+        # Make sure initial value is defined
+        if initial is None:
+            return
 
-        # Update with given values if required
-        if (initial is not None):
-            # Update the dictionary
-            self.update(initial)
+        # Delete existing value if defined
+        if self._redis.exists(self._key):
+            self._redis.delete(self._key)
 
-    def _make_subpath(self, key: str) -> str:
-        # Create and return a subpath
-        return f"{self._subpath}[{json.dumps(key)}]"
+        # Update the dictionary
+        self.update(initial)
 
-    def __getitem__(self, key: str) -> typing.Any:
-        # Make sure key is a string
-        if not isinstance(key, str):
-            raise TypeError(type(key))
+    def _identifier_from_key(self, key: typing.Any) -> typing.Union[str, bytes]:
+        # Fetch the identifier from the hash
+        identifier = self._redis.hget(self._key, self._encode(key))
 
-        # Get using subvalue
-        return self._get_item(self._make_subpath(key), KeyError(key))
+        # If the response is empty, item does not exist
+        if identifier is None:
+            raise KeyError(key)
 
-    def __setitem__(self, key: str, value: typing.Any) -> None:
-        # Set using subvalue
-        self._set_item(self._make_subpath(key), value)
+        # Make sure identifier is a string or bytes
+        if not isinstance(identifier, (str, bytes)):
+            raise TypeError(identifier)
 
-    def __delitem__(self, key: str) -> None:
-        # Delete the item from the database
-        self._delete_item(self._make_subpath(key), KeyError(key))
+        # Return the identifier
+        return identifier
 
-    def __contains__(self, key: str) -> bool:  # type: ignore[override]
+    def __getitem__(self, key: typing.Any) -> typing.Any:
+        # Fetch the identifier, then return the value
+        return self._fetch_by_identifier(self._identifier_from_key(key))
+
+    def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
+        # Fetch the identifier
+        original_identifier = self._redis.hget(self._key, self._encode(key))
+
+        # Insert a new value
+        with self._create_identifier_from_value(value) as identifier:
+            self._redis.hset(self._key, self._encode(key), identifier)
+
+        # If original identifier is not defined, there is nothing to delete
+        if original_identifier is None:
+            return
+
+        # Make sure the original identifier is a string or bytes
+        if not isinstance(original_identifier, (str, bytes)):
+            raise TypeError(original_identifier)
+
+        # Delete the original nested value
+        self._delete_by_identifier(original_identifier)
+
+    def __delitem__(self, key: typing.Any) -> None:
+        # Fetch the identifier
+        identifier = self._identifier_from_key(key)
+
+        # Delete the key from hash
+        self._redis.hdel(self._key, self._encode(key))
+
+        # Delete the nested value
+        self._delete_by_identifier(identifier)
+
+    def __contains__(self, key: typing.Any) -> bool:
         # Make sure key exists in database
-        return bool(self._json_module.type(self._absolute_name, self._make_subpath(key)))
+        return bool(self._redis.hexists(self._key, self._encode(key)))
 
-    def __iter__(self) -> typing.Iterator[str]:
-        # Fetch the object keys
-        object_keys, = self._json_module.objkeys(self._absolute_name, self._subpath)
+    def __iter__(self) -> typing.Iterator[typing.Any]:
+        # Fetch all hash keys
+        encoded_keys = self._redis.hkeys(self._key)
 
-        # Loop over keys and decode them
-        for object_key in object_keys:
-            # Decode the object if needed
-            if isinstance(object_key, bytes):
-                object_key = object_key.decode(self.ENCODING)
+        # Make sure encoded keys is iterable
+        if not isinstance(encoded_keys, Iterable):
+            raise TypeError(encoded_keys)
 
-            # Yield the object key
-            yield object_key
+        # Loop over all object keys
+        for encoded_key in encoded_keys:
+            # Make sure the encoded key is a string or bytes
+            if not isinstance(encoded_key, (str, bytes)):
+                raise TypeError(encoded_key)
+
+            # Yield the decoded key
+            yield self._decode(encoded_key)
 
     def __len__(self) -> int:
-        # Fetch the object length
-        object_length: typing.List[int] = self._json_module.objlen(self._absolute_name, self._subpath)
+        # Fetch the length of the hash
+        length = self._redis.hlen(self._key)
 
-        # If object length is an empty list, raise a KeyError
-        if not object_length:
-            raise KeyError(self._subpath)
+        # Make sure the length is an integer
+        if not isinstance(length, int):
+            raise TypeError(length)
 
-        # Untuple the result
-        object_length_value, = object_length
-
-        # Return the object length
-        return object_length_value
+        # Return the hash length
+        return length
 
     def __repr__(self) -> str:
         # Format the data like a dictionary
@@ -101,7 +130,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
         # Comparison succeeded
         return True
 
-    def pop(self, key: str, default: typing.Any = DEFAULT) -> typing.Any:
+    def pop(self, key: typing.Any, default: typing.Any = DEFAULT) -> typing.Any:
         try:
             # Fetch the original value
             value = self[key]
@@ -123,7 +152,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
             # Reraise exception
             raise
 
-    def popitem(self) -> typing.Tuple[str, typing.Any]:
+    def popitem(self) -> typing.Tuple[typing.Any, typing.Any]:
         # Convert self to list
         keys = list(self)
 
@@ -137,7 +166,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
         # Return the key and the value
         return key, self.pop(key)
 
-    def copy(self) -> typing.Dict[str, typing.Any]:
+    def copy(self) -> typing.Dict[typing.Any, typing.Any]:
         # Create initial bunch
         output = dict()
 
@@ -156,7 +185,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
         # Return the created output
         return output
 
-    def setdefaults(self, *dictionaries: typing.Dict[str, typing.Any], **values: typing.Dict[str, typing.Any]) -> None:
+    def setdefaults(self, *dictionaries: typing.Dict[typing.Any, typing.Any], **values: typing.Dict[typing.Any, typing.Any]) -> None:
         # Update values to include all dicts
         for dictionary in dictionaries:
             values.update(dictionary)
@@ -204,6 +233,5 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
                 object.__delattr__(self, key)
 
 
-# Registry object type
-REDIS_TYPE_MAPPING["object"] = Dictionary
-NESTED_TYPE_MAPPING[dict] = Dictionary
+# Register nested object
+NESTED_TYPES.append(NestedType("hash", Dictionary, dict))
