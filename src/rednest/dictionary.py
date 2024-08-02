@@ -6,7 +6,7 @@ import contextlib
 from collections.abc import Mapping
 
 # Import the abstract object
-from rednest.nested import Nested, NESTED_TYPES
+from rednest.nested import Nested, REDIS_TYPE_MAPPING, NESTED_TYPE_MAPPING
 
 # Create default object so that None can be used as default value
 DEFAULT = object()
@@ -17,8 +17,16 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
     # Bunch mode switch
     BUNCH = True
 
-    # Type globals
-    DEFAULT = {}
+    def _initialize(self, initial: typing.Optional[typing.Mapping[str, typing.Any]]) -> None:
+        # Initialize a default value if required
+        if (initial is not None) or (not self._json_module.type(self._absolute_name, self._subpath)):
+            # Initialize sub-structure
+            self._json_module.set(self._absolute_name, self._subpath, {})
+
+        # Update with given values if required
+        if (initial is not None):
+            # Update the dictionary
+            self.update(initial)
 
     def _make_subpath(self, key: str) -> str:
         # Create and return a subpath
@@ -30,23 +38,23 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
             raise TypeError(type(key))
 
         # Get using subvalue
-        return self._fetch_value(self._make_subpath(key), KeyError(key))
+        return self._get_item(self._make_subpath(key), KeyError(key))
 
     def __setitem__(self, key: str, value: typing.Any) -> None:
         # Set using subvalue
-        self._update_value(self._make_subpath(key), value)
+        self._set_item(self._make_subpath(key), value)
 
     def __delitem__(self, key: str) -> None:
         # Delete the item from the database
-        self._delete_value(self._make_subpath(key), KeyError(key))
+        self._delete_item(self._make_subpath(key), KeyError(key))
 
     def __contains__(self, key: str) -> bool:  # type: ignore[override]
         # Make sure key exists in database
-        return bool(self._json.type(self._absolute_name, self._make_subpath(key)))
+        return bool(self._json_module.type(self._absolute_name, self._make_subpath(key)))
 
     def __iter__(self) -> typing.Iterator[str]:
         # Fetch the object keys
-        object_keys, = self._json.objkeys(self._absolute_name, self._subpath)
+        object_keys, = self._json_module.objkeys(self._absolute_name, self._subpath)
 
         # Loop over keys and decode them
         for object_key in object_keys:
@@ -59,7 +67,7 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
     def __len__(self) -> int:
         # Fetch the object length
-        object_length: typing.List[int] = self._json.objlen(self._absolute_name, self._subpath)
+        object_length: typing.List[int] = self._json_module.objlen(self._absolute_name, self._subpath)
 
         # If object length is an empty list, raise a KeyError
         if not object_length:
@@ -197,4 +205,5 @@ class Dictionary(typing.MutableMapping[str, typing.Any], Nested):
 
 
 # Registry object type
-NESTED_TYPES["object"] = (Dictionary, dict)
+REDIS_TYPE_MAPPING["object"] = Dictionary
+NESTED_TYPE_MAPPING[dict] = Dictionary

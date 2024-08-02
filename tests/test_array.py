@@ -1,6 +1,6 @@
 import pytest
 
-from rednest import Array
+from rednest import Array, Dictionary
 
 from test_utilities import dictionary, array
 
@@ -162,3 +162,14 @@ def test_assignment(array):
 
     # Check assignment
     assert array == [1, 8]
+
+
+def test_array_dict_assignment(array):
+    # Insert to list
+    array.append(dict(a=["Hello", "World"]))
+
+    # Fetch the dict
+    assert isinstance(array[0], Dictionary)
+
+    # Make sure the value is set correctly
+    assert array[0].a == ["Hello", "World"]

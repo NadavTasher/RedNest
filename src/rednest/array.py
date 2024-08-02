@@ -5,13 +5,21 @@ import contextlib
 from collections.abc import Sequence
 
 # Import the abstract object
-from rednest.nested import Nested, NESTED_TYPES
+from rednest.nested import Nested, REDIS_TYPE_MAPPING, NESTED_TYPE_MAPPING
 
 
 class Array(typing.MutableSequence[typing.Any], Nested):
 
-    # Type globals
-    DEFAULT = []
+    def _initialize(self, initial: typing.Optional[typing.Container[typing.Any]]) -> None:
+        # Initialize a default value if required
+        if (initial is not None) or (not self._json_module.type(self._absolute_name, self._subpath)):
+            # Initialize sub-structure
+            self._json_module.set(self._absolute_name, self._subpath, [])
+
+        # Insert with given items if required
+        if (initial is not None):
+            # Insert to the list
+            self[:] = initial
 
     def _make_subpath(self, index: int) -> str:
         # Create and return a subpath
@@ -24,7 +32,7 @@ class Array(typing.MutableSequence[typing.Any], Nested):
             return [self[item_index] for item_index in range(*index.indices(len(self)))]
         elif isinstance(index, int):
             # Return using subvalue
-            return self._fetch_value(self._make_subpath(index), IndexError(index))
+            return self._get_item(self._make_subpath(index), IndexError(index))
 
         # Input type error
         raise TypeError("Array index must be an int or a slice")
@@ -53,7 +61,7 @@ class Array(typing.MutableSequence[typing.Any], Nested):
                     self.insert(stop + counter, subvalue)
         elif isinstance(index, int):
             # Set using subvalue
-            self._update_value(self._make_subpath(index), value)
+            self._set_item(self._make_subpath(index), value)
 
     def __delitem__(self, index: typing.Union[int, slice]) -> None:
         # If a slice is provided, splice the list
@@ -63,11 +71,11 @@ class Array(typing.MutableSequence[typing.Any], Nested):
                 del self[subindex - counter]
         elif isinstance(index, int):
             # Delete the item from the database
-            self._delete_value(self._make_subpath(index), IndexError(index))
+            self._delete_item(self._make_subpath(index), IndexError(index))
 
     def __len__(self) -> int:
         # Fetch the object length
-        object_length: typing.List[int] = self._json.arrlen(self._absolute_name, self._subpath)
+        object_length = self._json_module.arrlen(self._absolute_name, self._subpath)
 
         # If object length is an empty list, raise a KeyError
         if not object_length:
@@ -77,7 +85,7 @@ class Array(typing.MutableSequence[typing.Any], Nested):
         object_length_value, = object_length
 
         # Return the object length
-        return object_length_value
+        return int(object_length_value)
 
     def __repr__(self) -> str:
         # Format the data like a dictionary
@@ -103,7 +111,10 @@ class Array(typing.MutableSequence[typing.Any], Nested):
 
     def insert(self, index: int, value: typing.Any) -> None:
         # Insert new array item
-        self._json.arrinsert(self._absolute_name, self._subpath, index, value)
+        self._json_module.arrinsert(self._absolute_name, self._subpath, index, None)
+
+        # Set the item
+        self[index] = value
 
     def copy(self) -> typing.List[typing.Any]:
         # Create initial bunch
@@ -123,4 +134,5 @@ class Array(typing.MutableSequence[typing.Any], Nested):
 
 
 # Registry object type
-NESTED_TYPES["array"] = (Array, list)
+REDIS_TYPE_MAPPING["array"] = Array
+NESTED_TYPE_MAPPING[list] = Array

@@ -1,6 +1,6 @@
 import pytest
 
-from rednest import *
+from rednest import Array, Dictionary
 
 from test_utilities import dictionary
 
@@ -69,6 +69,21 @@ def test_write_recursive_dicts(dictionary):
 
     # Test setdefaults on subdictionary
     dictionary["Test"].setdefaults(a=1)
+
+
+def test_write_multiple_recursive_dicts(dictionary):
+    # Assign all of the recursive dicts
+    dictionary["Hello"] = dict(Sub1=dict(Sub2=dict(Sub3=["AAA", "BBB"])))
+
+    # Check item types
+    assert isinstance(dictionary.Hello, Dictionary)
+    assert isinstance(dictionary.Hello.Sub1, Dictionary)
+    assert isinstance(dictionary.Hello.Sub1.Sub2, Dictionary)
+    assert isinstance(dictionary.Hello.Sub1.Sub2.Sub3, Array)
+
+    # Check item value
+    assert dictionary.Hello.Sub1.Sub2.Sub3[0] == "AAA"
+    assert dictionary.Hello.Sub1.Sub2.Sub3[1] == "BBB"
 
 
 def test_len(dictionary):

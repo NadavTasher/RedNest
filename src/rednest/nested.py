@@ -1,66 +1,71 @@
-import redis
+import abc
 import typing
 
+import redis
+import redis.commands.json
 
-class Nested(object):
+class Nested(abc.ABC):
 
     # Instance globals
     _name: str = None  # type: ignore
     _redis: redis.Redis = None  # type: ignore
     _subpath: str = None  # type: ignore
+    _json_module: redis.commands.json.JSON = None # type: ignore
+    _should_decode: bool = None # type: ignore
 
     # Type globals
-    DEFAULT: typing.Any = None
     ENCODING: str = "utf-8"
 
-    def __init__(self, name: str, redis: redis.Redis, subpath: str = "$") -> None:
+    def __init__(self, name: str, redis: redis.Redis, subpath: str = "$", initial: typing.Optional[typing.Container[typing.Any]] = None) -> None:
         # Set internal input parameters
         self._name = name
         self._redis = redis
         self._subpath = subpath
 
-        # Initialize the object
-        self._initialize()
+        # Set decoding mode
+        self._json_module = self._redis.json()
+        self._should_decode = not self._redis.get_encoder().decode_responses
 
-    @property
-    def _json(self) -> typing.Any:
-        return self._redis.json()  # type: ignore[no-untyped-call]
+        # Initialize the object
+        self._initialize(initial)
 
     @property
     def _absolute_name(self) -> str:
         return f".{self._name}"
 
-    def _initialize(self) -> None:
-        # Initialize a default value if required
-        if not self._json.type(self._absolute_name, self._subpath):
-            # Initialize sub-structure
-            self._json.set(self._absolute_name, self._subpath, self.DEFAULT)
+    @abc.abstractmethod
+    def _initialize(self, initial: typing.Container[typing.Any]) -> None:
+        raise NotImplementedError()
 
-    def _fetch_value(self, subpath: str, exception: BaseException) -> typing.Any:
+    def _get_item(self, subpath: str, exception: BaseException) -> typing.Any:
         # Fetch the item type
-        item_type = self._json.type(self._absolute_name, subpath)
+        item_type_result = self._json_module.type(self._absolute_name, subpath)
 
         # If the item type is None, the item is not set
-        if not item_type:
+        if not item_type_result:
             raise exception
 
         # Untuple item type
-        item_type_value, = item_type
+        item_type, = item_type_result
 
         # Decode the item type if needed
-        if isinstance(item_type_value, bytes):
-            item_type_value = item_type_value.decode(self.ENCODING)
+        if self._should_decode:
+            item_type = item_type.decode(self.ENCODING)
 
         # Return different types as needed
-        if item_type_value in NESTED_TYPES:
-            # Fetch the conversion type
-            nested_class, _ = NESTED_TYPES[item_type_value]
-
+        if item_type in REDIS_TYPE_MAPPING:
             # Convert to a nested class
-            return nested_class(self._name, self._redis, subpath)
+            return REDIS_TYPE_MAPPING[item_type](self._name, self._redis, subpath)
 
         # Fetch the item value
-        item_value, = self._json.get(self._absolute_name, subpath)
+        item_value_result = self._json_module.get(self._absolute_name, subpath)
+
+        # If the item value is None, the item is not set
+        if not item_value_result:
+            raise exception
+        
+        # Untuple item value
+        item_value, = item_value_result
 
         # Return item value if not a string
         if not isinstance(item_value, str):
@@ -69,20 +74,29 @@ class Nested(object):
         # Evaluate the values
         return eval(item_value)
 
-    def _update_value(self, subpath: str, value: typing.Any) -> None:
-        # Check if should convert to string
-        if not any(isinstance(value, mapped_type) for _, mapped_type in NESTED_TYPES.values()):
-            value = repr(value)
+    def _set_item(self, subpath: str, value: typing.Any) -> None:
+        # Loop over every type in the mapping and check against value
+        for mapped_type, nested_class in NESTED_TYPE_MAPPING.items():
+            # Check whether the type is special
+            if not isinstance(value, mapped_type):
+                continue
 
-        # Set the item in the database
-        self._json.set(self._absolute_name, subpath, value)
+            # Convert to a nested class
+            nested_class(self._name, self._redis, subpath, value)
 
-    def _delete_value(self, subpath: str, exception: BaseException) -> None:
+            # Return - nothing to be done
+            return
+
+        # Convert to string representation
+        self._json_module.set(self._absolute_name, subpath, repr(value))
+
+    def _delete_item(self, subpath: str, exception: BaseException) -> None:
         # Delete the item from the database
-        if not self._json.delete(self._absolute_name, subpath):
+        if not self._json_module.delete(self._absolute_name, subpath):
             # If deletion failed, raise the exception
             raise exception
 
 
 # Nested object types
-NESTED_TYPES: typing.Dict[str, typing.Tuple[typing.Type[Nested], typing.Type[typing.Any]]] = dict()
+REDIS_TYPE_MAPPING: typing.Dict[str, typing.Type[Nested]] = dict()
+NESTED_TYPE_MAPPING: typing.Dict[typing.Type[Nested], typing.Type[typing.Container[typing.Any]]] = dict()
