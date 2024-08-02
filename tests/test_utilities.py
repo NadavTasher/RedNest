@@ -2,7 +2,7 @@ import os
 import redis
 import pytest
 
-from rednest import Array, Dictionary
+from rednest import List, Dictionary
 
 redis_connections = [redis.Redis(), redis.Redis(decode_responses=True)]
 
@@ -28,4 +28,4 @@ def array(request):
     redis_connection = request.param
 
     # Create a random dictionary
-    return Array(rand_name, redis=redis_connection)
+    return List(rand_name, redis=redis_connection)

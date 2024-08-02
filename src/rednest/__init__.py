@@ -2,7 +2,7 @@
 from rednest.encoder import Encoder
 
 # Import nested objects
-from rednest.array import Array
+from rednest.list import List
 from rednest.dictionary import Dictionary
 
 # Import errors

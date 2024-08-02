@@ -5,7 +5,7 @@ Redis dictionary / array nesting using ReJSON.
 ```python
 import redis
 
-from rednest import Dictionary, Array
+from rednest import Dictionary, List
 
 # Initialize redis connection
 redis = redis.Redis(...)

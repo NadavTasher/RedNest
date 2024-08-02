@@ -1,6 +1,6 @@
 import pytest
 
-from rednest import Array, Dictionary
+from rednest import List, Dictionary
 
 from test_utilities import dictionary
 
@@ -79,7 +79,7 @@ def test_write_multiple_recursive_dicts(dictionary):
     assert isinstance(dictionary.Hello, Dictionary)
     assert isinstance(dictionary.Hello.Sub1, Dictionary)
     assert isinstance(dictionary.Hello.Sub1.Sub2, Dictionary)
-    assert isinstance(dictionary.Hello.Sub1.Sub2.Sub3, Array)
+    assert isinstance(dictionary.Hello.Sub1.Sub2.Sub3, List)
 
     # Check item value
     assert dictionary.Hello.Sub1.Sub2.Sub3[0] == "AAA"

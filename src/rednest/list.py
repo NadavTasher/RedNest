@@ -9,7 +9,7 @@ from collections.abc import Sequence, Iterable
 from rednest.nested import Nested, NestedType, NESTED_TYPES
 
 
-class Array(typing.MutableSequence[typing.Any], Nested):
+class List(typing.MutableSequence[typing.Any], Nested):
 
     def _initialize(self, initial: typing.Optional[typing.List[typing.Any]]) -> None:
         # Make sure initial value is defined
@@ -225,4 +225,4 @@ class Array(typing.MutableSequence[typing.Any], Nested):
 
 
 # Extend nested types with list
-NESTED_TYPES.append(NestedType("list", Array, list))
+NESTED_TYPES.append(NestedType("list", List, list))

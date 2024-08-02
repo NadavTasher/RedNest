@@ -1,6 +1,6 @@
 import pytest
 
-from rednest import Array, Dictionary
+from rednest import List, Dictionary
 
 from test_utilities import dictionary, array
 
@@ -10,7 +10,7 @@ def test_array_create(dictionary):
     dictionary["Test"] = [1, 2, 3]
 
     # Make sure list is created
-    assert isinstance(dictionary["Test"], Array)
+    assert isinstance(dictionary["Test"], List)
 
 
 def test_nested_arrays(array):
@@ -18,7 +18,7 @@ def test_nested_arrays(array):
     array.append([0, 1, 2, 3])
 
     # Make sure list is created
-    assert isinstance(array[0], Array)
+    assert isinstance(array[0], List)
 
 
 def test_array_append(array):
