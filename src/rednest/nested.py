@@ -1,88 +1,134 @@
+import os
+import abc
 import redis
 import typing
+import contextlib
+import dataclasses
+
+# Import errors
+from rednest.errors import DeletionError
 
 
-class Nested(object):
+class Nested(abc.ABC):
 
     # Instance globals
-    _name: str = None  # type: ignore
+    _key: str = None  # type: ignore
     _redis: redis.Redis = None  # type: ignore
-    _subpath: str = None  # type: ignore
+    _master: str = None  # type: ignore
 
     # Type globals
-    DEFAULT: typing.Any = None
     ENCODING: str = "utf-8"
 
-    def __init__(self, name: str, redis: redis.Redis, subpath: str = "$") -> None:
+    def __init__(self, key: str, redis: redis.Redis, master: typing.Optional[str] = None, value: typing.Optional[typing.Any] = None) -> None:
         # Set internal input parameters
-        self._name = name
+        self._key = key
         self._redis = redis
-        self._subpath = subpath
+        self._master = master or key
 
         # Initialize the object
-        self._initialize()
+        self._initialize(value)
 
-    @property
-    def _json(self) -> typing.Any:
-        return self._redis.json()  # type: ignore[no-untyped-call]
+    @abc.abstractmethod
+    def _initialize(self, value: typing.Optional[typing.Any]) -> None:
+        raise NotImplementedError()
 
-    @property
-    def _absolute_name(self) -> str:
-        return f".{self._name}"
+    def _fetch_by_identifier(self, identifier: typing.Union[str, bytes]) -> typing.Any:
+        # Make sure the identifier is a string
+        if not isinstance(identifier, str):
+            identifier = identifier.decode(self.ENCODING)
 
-    def _initialize(self) -> None:
-        # Initialize a default value if required
-        if not self._json.type(self._absolute_name, self._subpath):
-            # Initialize sub-structure
-            self._json.set(self._absolute_name, self._subpath, self.DEFAULT)
+        # Split identifier to item type and encoded value
+        redis_identifier, encoded_item_value = identifier.split(":", 1)
 
-    def _fetch_value(self, subpath: str, exception: BaseException) -> typing.Any:
-        # Fetch the item type
-        item_type = self._json.type(self._absolute_name, subpath)
+        # Parse item type and encoded value to redis identifier and decoded value
+        decoded_item_value = self._decode(encoded_item_value)
 
-        # If the item type is None, the item is not set
-        if not item_type:
-            raise exception
+        # Check if the item is nested
+        for nested_type in NESTED_TYPES:
+            # Check whether the item type matches the redis identifier
+            if redis_identifier != nested_type.redis_identifier:
+                continue
 
-        # Untuple item type
-        item_type_value, = item_type
+            # Found a nested type match, create a nested instance
+            return nested_type.nested_class(key=decoded_item_value, redis=self._redis, master=self._master)
 
-        # Decode the item type if needed
-        if isinstance(item_type_value, bytes):
-            item_type_value = item_type_value.decode(self.ENCODING)
+        # Return the decoded value
+        return decoded_item_value
 
-        # Return different types as needed
-        if item_type_value in NESTED_TYPES:
-            # Fetch the conversion type
-            nested_class, _ = NESTED_TYPES[item_type_value]
+    def _delete_by_identifier(self, identifier: typing.Union[str, bytes]) -> None:
+        # Make sure the identifier is a string
+        if not isinstance(identifier, str):
+            identifier = identifier.decode(self.ENCODING)
 
-            # Convert to a nested class
-            return nested_class(self._name, self._redis, subpath)
+        # Split identifier to item type and encoded value
+        redis_identifier, encoded_item_value = identifier.split(":", 1)
 
-        # Fetch the item value
-        item_value, = self._json.get(self._absolute_name, subpath)
+        # Parse item type and encoded value to redis identifier and decoded value
+        decoded_item_value = self._decode(encoded_item_value)
 
-        # Return item value if not a string
-        if not isinstance(item_value, str):
-            return item_value
+        # Make sure the redis identifier is not empty
+        if not redis_identifier:
+            return
 
-        # Evaluate the values
-        return eval(item_value)
+        # Delete the object
+        if not self._redis.delete(decoded_item_value):
+            raise DeletionError(decoded_item_value)
 
-    def _update_value(self, subpath: str, value: typing.Any) -> None:
-        # Check if should convert to string
-        if not any(isinstance(value, mapped_type) for _, mapped_type in NESTED_TYPES.values()):
-            value = repr(value)
+    @contextlib.contextmanager
+    def _create_identifier_from_value(self, value: typing.Any) -> typing.Iterator[str]:
+        # Check whether value supports nesting
+        for nested_type in NESTED_TYPES:
+            # Check if the value is an instance of the current type
+            if not isinstance(value, nested_type.conversion_type):
+                continue
 
-        # Set the item in the database
-        self._json.set(self._absolute_name, subpath, value)
+            # Create a new nested name
+            nested_name = f"{self._master}:{os.urandom(10).hex()}"
 
-    def _delete_value(self, subpath: str, exception: BaseException) -> None:
-        # Delete the item from the database
-        if not self._json.delete(self._absolute_name, subpath):
-            # If deletion failed, raise the exception
-            raise exception
+            # Create a new nested class instance
+            nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master, value=value)
+
+            try:
+                # Yield the nested identifier
+                yield f"{nested_type.redis_identifier}:{self._encode(nested_name)}"
+            except:
+                # If there was a failure to insert the identifier, delete the nested item
+                self._redis.delete(nested_name)
+
+                # Re-raise the exception
+                raise
+
+            # Nothing more to do
+            return
+
+        # Yield the regular value
+        yield f":{self._encode(value)}"
+
+    def _encode(self, object: typing.Any) -> str:
+        # Return the representation of the object
+        return repr(object)
+
+    def _decode(self, value: typing.Union[str, bytes]) -> typing.Any:
+        # Make sure the value is a string
+        if not isinstance(value, str):
+            value = value.decode(self.ENCODING)
+
+        # Evaluate the value
+        return eval(value)
 
 
-# Nested object types
-NESTED_TYPES: typing.Dict[str, typing.Tuple[typing.Type[Nested], typing.Type[typing.Any]]] = dict()
+@dataclasses.dataclass
+class NestedType(object):
+
+    # Database identifier
+    redis_identifier: str
+
+    # Nested class
+    nested_class: typing.Type[Nested]
+
+    # Conversion type
+    conversion_type: typing.Type[typing.Collection[typing.Any]]
+
+
+# List of all supported nested types
+NESTED_TYPES: typing.List[NestedType] = list()

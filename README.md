@@ -1,11 +1,11 @@
 # RedNest
-Redis dictionary / array nesting using ReJSON.
+Redis dictionary / list nesting using `redis-py` and Redis `Hash`es and `List`s
 
 ## Usage example
 ```python
 import redis
 
-from rednest import Dictionary, Array
+from rednest import Dictionary, List
 
 # Initialize redis connection
 redis = redis.Redis(...)
