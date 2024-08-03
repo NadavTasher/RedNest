@@ -86,6 +86,45 @@ def test_write_multiple_recursive_dicts(dictionary):
     assert dictionary.Hello.Sub1.Sub2.Sub3[1] == "BBB"
 
 
+def test_dict_reassign(dictionary):
+    # Initialize a value
+    dictionary["A"] = "B"
+    dictionary["A"] = "C"
+
+    # Make sure reassign succeeded
+    assert dictionary["A"] == "C"
+
+    # Re-assign a nested variable
+    dictionary["A"] = {"B": "C"}
+    dictionary["A"] = {"B": "D"}
+
+    # Make sure reassign was successful
+    assert dictionary["A"]["B"] == "D"
+
+
+def test_dict_list_reassign(dictionary):
+    # Initialize a value
+    dictionary["A"] = [2, 3, 4]
+    dictionary["A"] = [1, 2, 3]
+
+    # Make sure reassign succeeded
+    assert dictionary["A"] == [1, 2, 3]
+
+    # Initialize a value
+    dictionary["B"] = []
+    dictionary["B"] = [1, 2, 3]
+
+    # Make sure reassign succeeded
+    assert dictionary["B"] == [1, 2, 3]
+
+    # Initialize a value
+    dictionary["C"] = [1, 2, 3]
+    dictionary["C"] = []
+
+    # Make sure reassign succeeded
+    assert dictionary["C"] == []
+
+
 def test_len(dictionary):
     # Make sure dictionary is empty
     assert not dictionary

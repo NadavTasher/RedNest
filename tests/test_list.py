@@ -85,6 +85,15 @@ def test_array_insert(array):
     array.insert(1, 8)
     assert array[1] == 8
 
+    # Test insert 0
+    array.insert(0, 100)
+    assert array[0] == 100
+
+    # Test insert -1
+    array.insert(-1, 99)
+    assert array[-1] == 99
+    assert array[len(array) - 1] == 99
+
 
 def test_array_slice(array):
     # Insert to list
@@ -173,3 +182,23 @@ def test_array_dict_assignment(array):
 
     # Make sure the value is set correctly
     assert array[0].a == ["Hello", "World"]
+
+
+def test_array_reassign(array):
+    # Create a new sublist
+    array.append([1, 2, 3])
+
+    # Make sure the item is a List
+    assert isinstance(array[0], List)
+
+    # Make sure the item has the value we expect
+    assert array[0] == [1, 2, 3]
+
+    # Reassign the value
+    array[0] = [2, 3, 4]
+
+    # Make sure the item is a List
+    assert isinstance(array[0], List)
+
+    # Make sure the item has the value we expect
+    assert array[0] == [2, 3, 4]
