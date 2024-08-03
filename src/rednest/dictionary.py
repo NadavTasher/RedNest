@@ -16,17 +16,16 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
     # Bunch mode switch
     BUNCH = True
 
-    def _initialize(self, initial: typing.Optional[typing.Dict[typing.Any, typing.Any]]) -> None:
-        # Make sure initial value is defined
-        if initial is None:
-            return
-
-        # Delete existing value if defined
-        if self._redis.exists(self._key):
-            self._redis.delete(self._key)
+    def initialize(self, value: typing.Dict[typing.Any, typing.Any]) -> None:
+        # De-initialize before initializing
+        self.deinitialize()
 
         # Update the dictionary
-        self.update(initial)
+        self.update(value)
+
+    def deinitialize(self) -> None:
+        # Clear the dictionary
+        self.clear()
 
     def _identifier_from_key(self, key: typing.Any) -> typing.Union[str, bytes]:
         # Fetch the identifier from the hash

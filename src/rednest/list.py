@@ -11,17 +11,16 @@ from rednest.nested import Nested, NestedType, NESTED_TYPES
 
 class List(typing.MutableSequence[typing.Any], Nested):
 
-    def _initialize(self, initial: typing.Optional[typing.List[typing.Any]]) -> None:
-        # Make sure initial value is defined
-        if initial is None:
-            return
-
-        # Delete existing value if defined
-        if self._redis.exists(self._key):
-            self._redis.delete(self._key)
+    def initialize(self, value: typing.List[typing.Any]) -> None:
+        # De-initialize before initializing
+        self.deinitialize()
 
         # Update the list
-        self[:] = initial
+        self[:] = value
+
+    def deinitialize(self) -> None:
+        # Clear the list
+        self.clear()
 
     def _identifier_from_index(self, index: int) -> typing.Union[str, bytes]:
         # Request the list at slice index->index

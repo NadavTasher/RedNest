@@ -5,9 +5,6 @@ import typing
 import contextlib
 import dataclasses
 
-# Import errors
-from rednest.errors import DeletionError
-
 
 class Nested(abc.ABC):
 
@@ -19,17 +16,18 @@ class Nested(abc.ABC):
     # Type globals
     ENCODING: str = "utf-8"
 
-    def __init__(self, key: str, redis: redis.Redis, master: typing.Optional[str] = None, value: typing.Optional[typing.Any] = None) -> None:
+    def __init__(self, key: str, redis: redis.Redis, master: typing.Optional[str] = None) -> None:
         # Set internal input parameters
         self._key = key
         self._redis = redis
         self._master = master or key
 
-        # Initialize the object
-        self._initialize(value)
+    @abc.abstractmethod
+    def initialize(self, value: typing.Any) -> None:
+        raise NotImplementedError()
 
     @abc.abstractmethod
-    def _initialize(self, value: typing.Optional[typing.Any]) -> None:
+    def deinitialize(self) -> None:
         raise NotImplementedError()
 
     def _fetch_by_identifier(self, identifier: typing.Union[str, bytes]) -> typing.Any:
@@ -60,19 +58,15 @@ class Nested(abc.ABC):
         if not isinstance(identifier, str):
             identifier = identifier.decode(self.ENCODING)
 
-        # Split identifier to item type and encoded value
-        redis_identifier, encoded_item_value = identifier.split(":", 1)
+        # Fetch the nested object
+        nested_item = self._fetch_by_identifier(identifier)
 
-        # Parse item type and encoded value to redis identifier and decoded value
-        decoded_item_value = self._decode(encoded_item_value)
-
-        # Make sure the redis identifier is not empty
-        if not redis_identifier:
+        # If the item is nested, deconstruct it
+        if not isinstance(nested_item, Nested):
             return
 
-        # Delete the object
-        if not self._redis.delete(decoded_item_value):
-            raise DeletionError(decoded_item_value)
+        # Deinitialize the nested item
+        nested_item.deinitialize()
 
     @contextlib.contextmanager
     def _create_identifier_from_value(self, value: typing.Any) -> typing.Iterator[str]:
@@ -86,7 +80,8 @@ class Nested(abc.ABC):
             nested_name = f"{self._master}:{os.urandom(10).hex()}"
 
             # Create a new nested class instance
-            nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master, value=value)
+            nested_instance = nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master)
+            nested_instance.initialize(value)
 
             try:
                 # Yield the nested identifier
