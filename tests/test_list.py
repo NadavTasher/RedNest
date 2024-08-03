@@ -69,6 +69,16 @@ def test_array_pop(array):
     assert array.pop(0) == 1
     assert len(array) == 1
 
+    # Add new items to array
+    array.append(90)
+    array.append(91)
+    array.append(92)
+    array.append(93)
+
+    # Make sure poping works
+    assert array.pop(-1) == 93
+    assert array.pop() == 92
+
 
 def test_array_insert(array):
     # Set array items
@@ -91,8 +101,12 @@ def test_array_insert(array):
 
     # Test insert -1
     array.insert(-1, 99)
-    assert array[-1] == 99
-    assert array[len(array) - 1] == 99
+    assert array[-2] == 99
+    assert array[len(array) - 2] == 99
+
+    # Test insert len
+    array.insert(len(array), 200)
+    assert array[-1] == 200
 
 
 def test_array_slice(array):
@@ -198,7 +212,24 @@ def test_array_reassign(array):
     array[0] = [2, 3, 4]
 
     # Make sure the item is a List
-    assert isinstance(array[0], List)
+
+    # Make sure the item has the value we expect
+    assert array[0] == [2, 3, 4]
+
+    # Reassign the value
+    array[0] = []
+
+    # Make sure the item is a List
+    assert isinstance(array[0], type(array))
+
+    # Make sure the item has the value we expect
+    assert array[0] == []
+
+    # Reassign the value
+    array[0] = [2, 3, 4]
+
+    # Make sure the item is a List
+    assert isinstance(array[0], type(array))
 
     # Make sure the item has the value we expect
     assert array[0] == [2, 3, 4]
