@@ -2,30 +2,31 @@ import os
 import redis
 import pytest
 
-from rednest import List, Dictionary
+# Rednest testing types
+from rednest import List as list_type, Dictionary as dictionary_type
 
-redis_connections = [redis.Redis(), redis.Redis(decode_responses=True)]
+# All supported test connections
+REDIS_CONNECTIONS = [redis.Redis(), redis.Redis(decode_responses=True)]
 
 
-@pytest.fixture(params=redis_connections)
-def dictionary(request):
+@pytest.fixture(params=REDIS_CONNECTIONS)
+def my_redis(request):
+    return request.param
+
+
+@pytest.fixture(params=REDIS_CONNECTIONS)
+def my_dictionary(request):
     # Generate random name
     rand_name = os.urandom(4).hex()
 
-    # Fetch connection
-    redis_connection = request.param
-
-    # Create a random dictionary
-    return Dictionary(rand_name, redis=redis_connection)
+    # Create a random my_dictionary
+    return dictionary_type(rand_name, redis=request.param)
 
 
-@pytest.fixture(params=redis_connections)
-def array(request):
+@pytest.fixture(params=REDIS_CONNECTIONS)
+def my_list(request):
     # Generate random name
     rand_name = os.urandom(4).hex()
 
-    # Fetch connection
-    redis_connection = request.param
-
-    # Create a random dictionary
-    return List(rand_name, redis=redis_connection)
+    # Create a random my_dictionary
+    return list_type(rand_name, redis=request.param)

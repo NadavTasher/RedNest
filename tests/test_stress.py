@@ -3,10 +3,10 @@ import string
 import random
 import multiprocessing
 
-from test_dictionary import dictionary
+from test_dictionary import my_dictionary
 
 
-def test_dictionary_multiprocess_rewrites(dictionary):
+def test_dictionary_multiprocess_rewrites(my_dictionary):
     # Create global things
     manager = multiprocessing.Manager()
     exceptions = manager.list()
@@ -16,7 +16,7 @@ def test_dictionary_multiprocess_rewrites(dictionary):
     def stress():
         for _ in range(10):
             try:
-                dictionary.update(large_dictionary)
+                my_dictionary.update(large_dictionary)
             except BaseException as e:
                 # Append failure
                 exceptions.append(e)
@@ -37,12 +37,12 @@ def test_dictionary_multiprocess_rewrites(dictionary):
         raise e
 
 
-def test_dictionary_kill_during_write(dictionary):
-    # Create the large dictionary
+def test_dictionary_kill_during_write(my_dictionary):
+    # Create the large my_dictionary
     large_dictionary = {"".join(random.sample(list(string.ascii_letters), 10)): "".join(random.sample(list(string.ascii_letters), 10)) for _ in range(1000)}
 
     def write():
-        dictionary.update(large_dictionary)
+        my_dictionary.update(large_dictionary)
 
     process = multiprocessing.Process(target=write)
     process.start()
@@ -56,21 +56,21 @@ def test_dictionary_kill_during_write(dictionary):
     # Wait for the process to stop
     process.join()
 
-    # Check dictionary integrity
-    data = dictionary.copy()
+    # Check my_dictionary integrity
+    data = my_dictionary.copy()
 
-    # Make sure the dictionary was not empty
+    # Make sure the my_dictionary was not empty
     assert data
 
 
-def test_dictionary_multiprocess_kill_during_write(dictionary):
+def test_dictionary_multiprocess_kill_during_write(my_dictionary):
     # Create global things
     manager = multiprocessing.Manager()
     exceptions = manager.list()
 
     def stress():
         try:
-            dictionary.update({"".join(random.sample(list(string.ascii_letters), 10)): "".join(random.sample(list(string.ascii_letters), 10)) for _ in range(100)})
+            my_dictionary.update({"".join(random.sample(list(string.ascii_letters), 10)): "".join(random.sample(list(string.ascii_letters), 10)) for _ in range(100)})
         except BaseException as e:
             # Append failure
             exceptions.append(e)
@@ -93,10 +93,10 @@ def test_dictionary_multiprocess_kill_during_write(dictionary):
     for p in processes:
         p.join()
 
-    # Check dictionary integrity
-    data = dictionary.copy()
+    # Check my_dictionary integrity
+    data = my_dictionary.copy()
 
-    # Make sure the dictionary was not empty
+    # Make sure the my_dictionary was not empty
     assert data
 
     # Raise all of the exceptions

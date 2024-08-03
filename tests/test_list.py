@@ -1,235 +1,233 @@
 import pytest
 
-from rednest import List, Dictionary
-
-from test_utilities import dictionary, array
+from test_utilities import my_dictionary, my_list, list_type, dictionary_type
 
 
-def test_array_create(dictionary):
+def test_create(my_dictionary):
     # Create the list type
-    dictionary["Test"] = [1, 2, 3]
+    my_dictionary["Test"] = [1, 2, 3]
 
     # Make sure list is created
-    assert isinstance(dictionary["Test"], List)
+    assert isinstance(my_dictionary["Test"], list_type)
 
 
-def test_nested_arrays(array):
+def test_nested_arrays(my_list):
     # Set subarray
-    array.append([0, 1, 2, 3])
+    my_list.append([0, 1, 2, 3])
 
     # Make sure list is created
-    assert isinstance(array[0], List)
+    assert isinstance(my_list[0], list_type)
 
 
-def test_array_append(array):
-    # Set array items
-    array.append(1)
-    array.append(2)
-    array.append(3)
-
-    # Make sure all items are working properly
-    assert array[0] == 1
-    assert array[1] == 2
-    assert array[2] == 3
-
-
-def test_array_contains(array):
-    # Set array items
-    array.append(1)
+def test_append(my_list):
+    # Set my_list items
+    my_list.append(1)
+    my_list.append(2)
+    my_list.append(3)
 
     # Make sure all items are working properly
-    assert 1 in array
-    assert 4 not in array
+    assert my_list[0] == 1
+    assert my_list[1] == 2
+    assert my_list[2] == 3
 
 
-def test_array_delete(array):
-    # Set array items
-    array.append(1)
+def test_contains(my_list):
+    # Set my_list items
+    my_list.append(1)
+
+    # Make sure all items are working properly
+    assert 1 in my_list
+    assert 4 not in my_list
+
+
+def test_delete(my_list):
+    # Set my_list items
+    my_list.append(1)
 
     # Delete from list
-    assert 1 in array
-    del array[0]
-    assert 1 not in array
+    assert 1 in my_list
+    del my_list[0]
+    assert 1 not in my_list
 
     # Delete non-existent item
     with pytest.raises(IndexError):
-        del array[0]
+        del my_list[0]
 
 
-def test_array_pop(array):
-    # Set array items
-    array.append(1)
-    array.append(2)
-    array.append(3)
-    array.append(4)
+def test_pop(my_list):
+    # Set my_list items
+    my_list.append(1)
+    my_list.append(2)
+    my_list.append(3)
+    my_list.append(4)
 
     # Delete from list
-    assert array.pop() == 4
-    assert array.pop() == 3
-    assert array.pop(0) == 1
-    assert len(array) == 1
+    assert my_list.pop() == 4
+    assert my_list.pop() == 3
+    assert my_list.pop(0) == 1
+    assert len(my_list) == 1
 
-    # Add new items to array
-    array.append(90)
-    array.append(91)
-    array.append(92)
-    array.append(93)
+    # Add new items to my_list
+    my_list.append(90)
+    my_list.append(91)
+    my_list.append(92)
+    my_list.append(93)
 
     # Make sure poping works
-    assert array.pop(-1) == 93
-    assert array.pop() == 92
+    assert my_list.pop(-1) == 93
+    assert my_list.pop() == 92
 
 
-def test_array_insert(array):
-    # Set array items
-    array.append(1)
-    array.append(2)
-    array.append(3)
-    array.append(4)
-
-    # Insert in list
-    array.insert(0, 9)
-    assert array[0] == 9
+def test_insert(my_list):
+    # Set my_list items
+    my_list.append(1)
+    my_list.append(2)
+    my_list.append(3)
+    my_list.append(4)
 
     # Insert in list
-    array.insert(1, 8)
-    assert array[1] == 8
+    my_list.insert(0, 9)
+    assert my_list[0] == 9
+
+    # Insert in list
+    my_list.insert(1, 8)
+    assert my_list[1] == 8
 
     # Test insert 0
-    array.insert(0, 100)
-    assert array[0] == 100
+    my_list.insert(0, 100)
+    assert my_list[0] == 100
 
     # Test insert -1
-    array.insert(-1, 99)
-    assert array[-2] == 99
-    assert array[len(array) - 2] == 99
+    my_list.insert(-1, 99)
+    assert my_list[-2] == 99
+    assert my_list[len(my_list) - 2] == 99
 
     # Test insert len
-    array.insert(len(array), 200)
-    assert array[-1] == 200
+    my_list.insert(len(my_list), 200)
+    assert my_list[-1] == 200
 
 
-def test_array_slice(array):
+def test_slice(my_list):
     # Insert to list
     for index in range(10):
-        array.append(index)
+        my_list.append(index)
 
     # Check slice
-    assert array[3:6] == [3, 4, 5]
+    assert my_list[3:6] == [3, 4, 5]
 
     # Delete slice
-    del array[2:5]
+    del my_list[2:5]
 
     # Check slice
-    assert array == [0, 1, 5, 6, 7, 8, 9]
+    assert my_list == [0, 1, 5, 6, 7, 8, 9]
 
     # Set slice
-    array[3:6] = range(6)
+    my_list[3:6] = range(6)
 
     # Check slice
-    assert array == [0, 1, 5, 0, 1, 2, 3, 4, 5, 9]
+    assert my_list == [0, 1, 5, 0, 1, 2, 3, 4, 5, 9]
 
     # Get extended slices
-    assert array[3:8:2] == [0, 2, 4]
+    assert my_list[3:8:2] == [0, 2, 4]
 
     # Delete extended slices
-    del array[3:8:2]
+    del my_list[3:8:2]
 
     # Check deleted slice
-    assert array == [0, 1, 5, 1, 3, 5, 9]
+    assert my_list == [0, 1, 5, 1, 3, 5, 9]
 
     # Insert extended slice (should fail)
     with pytest.raises(ValueError):
-        array[2:9:3] = range(10)
+        my_list[2:9:3] = range(10)
 
     # Insert extended slice
-    array[2:9:3] = range(90, 92)
+    my_list[2:9:3] = range(90, 92)
 
-    # Make sure the array is as expected
-    assert array == [0, 1, 90, 1, 3, 91, 9]
+    # Make sure the my_list is as expected
+    assert my_list == [0, 1, 90, 1, 3, 91, 9]
 
 
-def test_negative_index(array):
+def test_negative_index(my_list):
     # Insert to list
-    array.append(1)
-    array.append(2)
+    my_list.append(1)
+    my_list.append(2)
 
     # Make sure the negative index works
-    assert array[-1] == 2
-    assert array[-2] == 1
+    assert my_list[-1] == 2
+    assert my_list[-2] == 1
 
 
-def test_equals(array):
+def test_equals(my_list):
     # Insert to list
-    array.append(1)
-    array.append(2)
-    array.append(3)
+    my_list.append(1)
+    my_list.append(2)
+    my_list.append(3)
 
     # Compare
-    assert array != [2, 3]
-    assert array != None
-    assert array != [2, 3, 4]
-    assert array == [1, 2, 3]
+    assert my_list != [2, 3]
+    assert my_list != None
+    assert my_list != [2, 3, 4]
+    assert my_list == [1, 2, 3]
 
     # This is a convenient feature, regular lists don't do this.
-    assert array == (1, 2, 3)
+    assert my_list == (1, 2, 3)
 
 
-def test_assignment(array):
+def test_assignment(my_list):
     # Insert to list
-    array.append(1)
-    array.append(2)
+    my_list.append(1)
+    my_list.append(2)
 
     # Assign item
-    array[1] = 8
+    my_list[1] = 8
 
     # Check assignment
-    assert array == [1, 8]
+    assert my_list == [1, 8]
 
 
-def test_array_dict_assignment(array):
+def test_dict_assignment(my_list):
     # Insert to list
-    array.append(dict(a=["Hello", "World"]))
+    my_list.append(dict(a=["Hello", "World"]))
 
     # Fetch the dict
-    assert isinstance(array[0], Dictionary)
+    assert isinstance(my_list[0], dictionary_type)
 
     # Make sure the value is set correctly
-    assert array[0].a == ["Hello", "World"]
+    assert my_list[0].a == ["Hello", "World"]
 
 
-def test_array_reassign(array):
+def test_reassign(my_list):
     # Create a new sublist
-    array.append([1, 2, 3])
+    my_list.append([1, 2, 3])
 
-    # Make sure the item is a List
-    assert isinstance(array[0], List)
+    # Make sure the item is a list_type
+    assert isinstance(my_list[0], list_type)
 
     # Make sure the item has the value we expect
-    assert array[0] == [1, 2, 3]
+    assert my_list[0] == [1, 2, 3]
 
     # Reassign the value
-    array[0] = [2, 3, 4]
+    my_list[0] = [2, 3, 4]
 
-    # Make sure the item is a List
+    # Make sure the item is a list_type
 
     # Make sure the item has the value we expect
-    assert array[0] == [2, 3, 4]
+    assert my_list[0] == [2, 3, 4]
 
     # Reassign the value
-    array[0] = []
+    my_list[0] = []
 
-    # Make sure the item is a List
-    assert isinstance(array[0], type(array))
+    # Make sure the item is a list_type
+    assert isinstance(my_list[0], type(my_list))
 
     # Make sure the item has the value we expect
-    assert array[0] == []
+    assert my_list[0] == []
 
     # Reassign the value
-    array[0] = [2, 3, 4]
+    my_list[0] = [2, 3, 4]
 
-    # Make sure the item is a List
-    assert isinstance(array[0], type(array))
+    # Make sure the item is a list_type
+    assert isinstance(my_list[0], type(my_list))
 
     # Make sure the item has the value we expect
-    assert array[0] == [2, 3, 4]
+    assert my_list[0] == [2, 3, 4]
