@@ -128,11 +128,17 @@ class List(typing.MutableSequence[typing.Any], Nested):
             # Generate a temporary value
             temporary_value = os.urandom(64).hex()
 
-            # Set the temporary value at the current index
-            self._redis.lset(self._key, index, temporary_value)
+            # Use a pipeline to execute all of the actions atomically
+            pipeline = self._redis.pipeline()
 
-            # Delete the item with the temporary value from the list
-            self._redis.lrem(self._key, 1, temporary_value)
+            # Set the temporary value in the selected index
+            pipeline.lset(self._key, index, temporary_value)
+
+            # Remove 1 item with the temporary value
+            pipeline.lrem(self._key, 1, temporary_value)
+
+            # Execute all pipeline actions
+            pipeline.execute()
 
         # Delete the original nested object
         self._delete_by_identifier(identifier)
@@ -192,19 +198,25 @@ class List(typing.MutableSequence[typing.Any], Nested):
             if not isinstance(original_identifier, str):
                 original_identifier = original_identifier.decode(self.ENCODING)
 
-            # Generate a temporary value
-            temporary_value = os.urandom(64).hex()
-
             # Create the new value already
             with self._create_identifier_from_value(value) as identifier:
+                # Generate a temporary value
+                temporary_value = os.urandom(64).hex()
+
+                # Use a pipeline to execute all of the actions atomically
+                pipeline = self._redis.pipeline()
+
                 # Set the temporary value at the current index
-                self._redis.lset(self._key, index, temporary_value)
+                pipeline.lset(self._key, index, temporary_value)
 
                 # Insert the new item before the temporary item
-                self._redis.linsert(self._key, "before", temporary_value, identifier)
+                pipeline.linsert(self._key, "before", temporary_value, identifier)
 
                 # Restore the original value at the required index
-                self._redis.lset(self._key, index + 1, original_identifier)
+                pipeline.lset(self._key, index + 1, original_identifier)
+
+                # Execute all pipeline actions
+                pipeline.execute()
 
     def copy(self) -> typing.List[typing.Any]:
         # Create initial bunch
