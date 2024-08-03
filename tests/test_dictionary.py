@@ -123,6 +123,29 @@ def test_list_reassign(my_dictionary):
     assert my_dictionary["C"] == []
 
 
+def test_list_reassign_bunch(my_dictionary):
+    # Initialize a value
+    my_dictionary.A = [2, 3, 4]
+    my_dictionary.A = [1, 2, 3]
+
+    # Make sure reassign succeeded
+    assert my_dictionary.A == [1, 2, 3]
+
+    # Initialize a value
+    my_dictionary.B = []
+    my_dictionary.B = [1, 2, 3]
+
+    # Make sure reassign succeeded
+    assert my_dictionary.B == [1, 2, 3]
+
+    # Initialize a value
+    my_dictionary.C = [1, 2, 3]
+    my_dictionary.C = []
+
+    # Make sure reassign succeeded
+    assert my_dictionary.C == []
+
+
 def test_len(my_dictionary):
     # Make sure my_dictionary is empty
     assert not my_dictionary
