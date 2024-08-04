@@ -11,7 +11,7 @@ from rednest import Dictionary, List
 redis = redis.Redis(...)
 
 # Create your dictionary
-my_dict = Dictionary("test-dict", redis)
+my_dict = Dictionary(redis, "test-dict")
 my_dict.test_value = "Hello World"
 my_dict.numbers = [10, 20, 30]
 my_dict.ages = {

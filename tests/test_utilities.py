@@ -20,7 +20,7 @@ def my_dictionary(request):
     rand_name = os.urandom(4).hex()
 
     # Create a random my_dictionary
-    return dictionary_type(rand_name, redis=request.param)
+    return dictionary_type(request.param, rand_name)
 
 
 @pytest.fixture(params=REDIS_CONNECTIONS)
@@ -29,4 +29,4 @@ def my_list(request):
     rand_name = os.urandom(4).hex()
 
     # Create a random my_dictionary
-    return list_type(rand_name, redis=request.param)
+    return list_type(request.param, rand_name)

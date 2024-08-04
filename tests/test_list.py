@@ -78,6 +78,42 @@ def test_pop(my_list):
     assert my_list.pop() == 92
 
 
+def test_pop_nested(my_list):
+    # Load some value
+    my_list.append(dict(hello="World"))
+
+    # Check the value
+    assert my_list[0]["hello"] == "World"
+    assert my_list[0].copy()["hello"] == "World"
+
+    # Pop the item
+    value = my_list.pop(0)
+
+    # Make sure the value is set
+    assert value
+    assert value["hello"] == "World"
+
+
+def test_initialize_nested(my_list):
+    # Initialize one list
+    my_list.append([1, 2, 3, 4, 5, dict(a=1, b=2)])
+
+    # Copy the list
+    my_list.append(my_list[0])
+
+    # Make sure the second list is a list_Type
+    assert isinstance(my_list[1], list_type)
+
+    # Delete the original list
+    del my_list[0]
+
+    # Make sure the new list exists
+    assert my_list[0]
+
+    # Make sure the values still exist
+    assert my_list[0] == [1, 2, 3, 4, 5, dict(a=1, b=2)]
+
+
 def test_insert(my_list):
     # Set my_list items
     my_list.append(1)

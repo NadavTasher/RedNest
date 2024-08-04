@@ -13,17 +13,17 @@ DEFAULT = object()
 
 class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
-    # Bunch mode switch
-    BUNCH = True
+    # Copy type - the type used when calling copy
+    _COPY_TYPE: typing.Type[typing.MutableMapping[typing.Any, typing.Any]] = dict
 
-    def initialize(self, value: typing.Dict[typing.Any, typing.Any]) -> None:
+    def _initialize(self, value: typing.Dict[typing.Any, typing.Any]) -> None:
         # De-initialize before initializing
-        self.deinitialize()
+        self._deinitialize()
 
         # Update the dictionary
         self.update(value)
 
-    def deinitialize(self) -> None:
+    def _deinitialize(self) -> None:
         # Clear the dictionary
         self.clear()
 
@@ -41,6 +41,10 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Return the identifier
         return identifier
+
+    def __repr__(self) -> str:
+        # Format the data like a dictionary
+        return f"{{{', '.join(f'{repr(key)}: {repr(value)}' for key, value in self.items())}}}"
 
     def __getitem__(self, key: typing.Any) -> typing.Any:
         # Fetch the identifier, then return the value
@@ -107,10 +111,6 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # Return the hash length
         return length
 
-    def __repr__(self) -> str:
-        # Format the data like a dictionary
-        return "{%s}" % ", ".join("%r: %r" % item for item in self.items())
-
     def __eq__(self, other: typing.Any) -> bool:
         # Make sure the other object is a mapping
         if not isinstance(other, Mapping):
@@ -165,9 +165,9 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # Return the key and the value
         return key, self.pop(key)
 
-    def copy(self) -> typing.Dict[typing.Any, typing.Any]:
+    def copy(self) -> typing.Mapping[typing.Any, typing.Any]:
         # Create initial bunch
-        output = dict()
+        output = self._COPY_TYPE()
 
         # Loop over keys
         for key in self:
@@ -184,6 +184,8 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # Return the created output
         return output
 
+    # Utility functions
+
     def setdefaults(self, *dictionaries: typing.Dict[typing.Any, typing.Any], **values: typing.Dict[typing.Any, typing.Any]) -> None:
         # Update values to include all dicts
         for dictionary in dictionaries:
@@ -193,43 +195,42 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         for key, value in values.items():
             self.setdefault(key, value)
 
-    # If bunch mode is enabled (on by default, define some more functions)
-    if BUNCH:
+    # Munching functions
 
-        def __getattr__(self, key: str) -> typing.Any:
+    def __getattr__(self, key: str) -> typing.Any:
+        try:
+            return object.__getattribute__(self, key)
+        except AttributeError:
+            # Key is not in prototype chain, try returning
             try:
-                return object.__getattribute__(self, key)
-            except AttributeError:
-                # Key is not in prototype chain, try returning
-                try:
-                    return self[key]
-                except KeyError:
-                    # Replace KeyErrors with AttributeErrors
-                    raise AttributeError(key)
+                return self[key]
+            except KeyError:
+                # Replace KeyErrors with AttributeErrors
+                raise AttributeError(key)
 
-        def __setattr__(self, key: str, value: typing.Any) -> None:
-            try:
-                object.__getattribute__(self, key)
-            except AttributeError:
-                # Set the item
-                self[key] = value
-            else:
-                # Key is in prototype chain, set it
-                object.__setattr__(self, key, value)
+    def __setattr__(self, key: str, value: typing.Any) -> None:
+        try:
+            object.__getattribute__(self, key)
+        except AttributeError:
+            # Set the item
+            self[key] = value
+        else:
+            # Key is in prototype chain, set it
+            object.__setattr__(self, key, value)
 
-        def __delattr__(self, key: str) -> None:
+    def __delattr__(self, key: str) -> None:
+        try:
+            object.__getattribute__(self, key)
+        except AttributeError:
+            # Delete the item
             try:
-                object.__getattribute__(self, key)
-            except AttributeError:
-                # Delete the item
-                try:
-                    del self[key]
-                except KeyError:
-                    # Replace KeyErrors with AttributeErrors
-                    raise AttributeError(key)
-            else:
-                # Key is in prototype chain, delete it
-                object.__delattr__(self, key)
+                del self[key]
+            except KeyError:
+                # Replace KeyErrors with AttributeErrors
+                raise AttributeError(key)
+        else:
+            # Key is in prototype chain, delete it
+            object.__delattr__(self, key)
 
 
 # Register nested object

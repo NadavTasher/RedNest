@@ -6,7 +6,7 @@ from rednest import *
 from test_utilities import my_dictionary, my_list
 
 
-def test_dict_encoding(my_dictionary):
+def test_dict__ENCODING(my_dictionary):
     # Assign values
     my_dictionary["AAA"] = 5
     my_dictionary["AAB"] = [1, 2, 3]
@@ -15,7 +15,7 @@ def test_dict_encoding(my_dictionary):
     assert json.dumps(my_dictionary)
 
 
-def test_array_encoding(my_list):
+def test_array__ENCODING(my_list):
     # Insert to list
     for x in range(10):
         my_list.append(x)

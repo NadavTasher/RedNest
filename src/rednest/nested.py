@@ -8,32 +8,39 @@ import dataclasses
 
 class Nested(abc.ABC):
 
-    # Instance globals
-    _key: str = None  # type: ignore
+    # Instance redis connection
     _redis: redis.Redis = None  # type: ignore
+
+    # Instance structure information
+    _key: str = None  # type: ignore
     _master: str = None  # type: ignore
 
     # Type globals
-    ENCODING: str = "utf-8"
+    _ENCODING: str = "utf-8"
 
-    def __init__(self, key: str, redis: redis.Redis, master: typing.Optional[str] = None) -> None:
-        # Set internal input parameters
-        self._key = key
+    def __init__(self, redis: redis.Redis, key: str, master: typing.Optional[str] = None) -> None:
+        # Store redis connection
         self._redis = redis
+
+        # Store structure information
+        self._key = key
         self._master = master or key
 
+    def lock(self) -> redis.lock.Lock:
+        return redis.lock.Lock(self._redis, f"{self._key}:lock")
+
     @abc.abstractmethod
-    def initialize(self, value: typing.Any) -> None:
+    def _initialize(self, value: typing.Any) -> None:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def deinitialize(self) -> None:
+    def _deinitialize(self) -> None:
         raise NotImplementedError()
 
     def _fetch_by_identifier(self, identifier: typing.Union[str, bytes]) -> typing.Any:
         # Make sure the identifier is a string
         if not isinstance(identifier, str):
-            identifier = identifier.decode(self.ENCODING)
+            identifier = identifier.decode(self._ENCODING)
 
         # Split identifier to item type and encoded value
         redis_identifier, encoded_item_value = identifier.split(":", 1)
@@ -56,7 +63,7 @@ class Nested(abc.ABC):
     def _delete_by_identifier(self, identifier: typing.Union[str, bytes]) -> None:
         # Make sure the identifier is a string
         if not isinstance(identifier, str):
-            identifier = identifier.decode(self.ENCODING)
+            identifier = identifier.decode(self._ENCODING)
 
         # Fetch the nested object
         nested_item = self._fetch_by_identifier(identifier)
@@ -66,14 +73,14 @@ class Nested(abc.ABC):
             return
 
         # Deinitialize the nested item
-        nested_item.deinitialize()
+        nested_item._deinitialize()
 
     @contextlib.contextmanager
     def _create_identifier_from_value(self, value: typing.Any) -> typing.Iterator[str]:
         # Check whether value supports nesting
         for nested_type in NESTED_TYPES:
             # Check if the value is an instance of the current type
-            if not isinstance(value, nested_type.conversion_type):
+            if not isinstance(value, (nested_type.nested_class, nested_type.convertable_type)):
                 continue
 
             # Create a new nested name
@@ -81,7 +88,7 @@ class Nested(abc.ABC):
 
             # Create a new nested class instance
             nested_instance = nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master)
-            nested_instance.initialize(value)
+            nested_instance._initialize(value)
 
             try:
                 # Yield the nested identifier
@@ -106,7 +113,7 @@ class Nested(abc.ABC):
     def _decode(self, value: typing.Union[str, bytes]) -> typing.Any:
         # Make sure the value is a string
         if not isinstance(value, str):
-            value = value.decode(self.ENCODING)
+            value = value.decode(self._ENCODING)
 
         # Evaluate the value
         return eval(value)
@@ -121,8 +128,8 @@ class NestedType(object):
     # Nested class
     nested_class: typing.Type[Nested]
 
-    # Conversion type
-    conversion_type: typing.Type[typing.Collection[typing.Any]]
+    # Convertable type
+    convertable_type: typing.Type[typing.Collection[typing.Any]]
 
 
 # List of all supported nested types

@@ -168,6 +168,43 @@ def test_pop(my_dictionary):
     assert not my_dictionary
 
 
+def test_pop_nested(my_dictionary):
+    # Load some value
+    my_dictionary["Test"] = dict(hello="World")
+
+    # Make sure subdict is nested
+    assert isinstance(my_dictionary["Test"], dictionary_type)
+
+    # Make sure value is set
+    assert my_dictionary["Test"].copy()
+
+    # Pop the item
+    value = my_dictionary.pop("Test")
+
+    # Make sure value has the hello key
+    assert value["hello"] == "World"
+
+
+def test_initialize_nested(my_dictionary):
+    # Initialize one dict
+    my_dictionary["Test"] = dict(a=1, b=2, c=[1, 2, 3])
+
+    # Copy the dictionary
+    my_dictionary["Test-2"] = my_dictionary["Test"]
+
+    # Make sure the second dictionary is a dictionary_type
+    assert isinstance(my_dictionary["Test-2"], dictionary_type)
+
+    # Delete the original dictionary
+    del my_dictionary["Test"]
+
+    # Make sure the new dicrionary exists
+    assert my_dictionary["Test-2"]
+
+    # Make sure the values still exist
+    assert my_dictionary["Test-2"] == dict(a=1, b=2, c=[1, 2, 3])
+
+
 def test_popitem(my_dictionary):
     # Load value to my_dictionary
     my_dictionary["Hello"] = "World"

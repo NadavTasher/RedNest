@@ -3,7 +3,7 @@ from test_utilities import my_redis, dictionary_type, list_type
 
 def test_readme_example(my_redis):
     # Create my_dictionary
-    my_dict = dictionary_type("test-dict", my_redis)
+    my_dict = dictionary_type(my_redis, "test-dict")
     my_dict.test_value = "Hello World"
     my_dict.numbers = [10, 20, 30]
     my_dict.ages = {

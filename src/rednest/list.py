@@ -11,14 +11,17 @@ from rednest.nested import Nested, NestedType, NESTED_TYPES
 
 class List(typing.MutableSequence[typing.Any], Nested):
 
-    def initialize(self, value: typing.List[typing.Any]) -> None:
+    # Copy type - the type used when calling copy
+    _COPY_TYPE: typing.Type[typing.MutableSequence[typing.Any]] = list
+
+    def _initialize(self, value: typing.List[typing.Any]) -> None:
         # De-initialize before initializing
-        self.deinitialize()
+        self._deinitialize()
 
         # Update the list
         self[:] = value
 
-    def deinitialize(self) -> None:
+    def _deinitialize(self) -> None:
         # Clear the list
         self.clear()
 
@@ -43,6 +46,10 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
         # Return the identifier
         return identifier
+
+    def __repr__(self) -> str:
+        # Format the data like a list
+        return f"[{', '.join(repr(item) for item in self)}]"
 
     def __getitem__(self, index: typing.Union[int, slice]) -> typing.Union[typing.Any, typing.List[typing.Any]]:
         # If a slice is provided, return a list of items
@@ -138,7 +145,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
             pipeline.lrem(self._key, 1, temporary_value)
 
             # Execute all pipeline actions
-            pipeline.execute()
+            pipeline.execute()  # type: ignore[no-untyped-call]
 
         # Delete the original nested object
         self._delete_by_identifier(identifier)
@@ -153,10 +160,6 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
         # Return the length
         return length
-
-    def __repr__(self) -> str:
-        # Format the data like a dictionary
-        return "[%s]" % ", ".join(repr(item) for item in self)
 
     def __eq__(self, other: typing.Any) -> bool:
         # Make sure the other item is a sequence
@@ -196,7 +199,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
             # Make sure the original identifier is a string
             if not isinstance(original_identifier, str):
-                original_identifier = original_identifier.decode(self.ENCODING)
+                original_identifier = original_identifier.decode(self._ENCODING)
 
             # Create the new value already
             with self._create_identifier_from_value(value) as identifier:
@@ -216,11 +219,11 @@ class List(typing.MutableSequence[typing.Any], Nested):
                 pipeline.lset(self._key, index + 1, original_identifier)
 
                 # Execute all pipeline actions
-                pipeline.execute()
+                pipeline.execute()  # type: ignore[no-untyped-call]
 
-    def copy(self) -> typing.List[typing.Any]:
+    def copy(self) -> typing.Sequence[typing.Any]:
         # Create initial bunch
-        output = list()
+        output = self._COPY_TYPE()
 
         # Loop over keys
         for value in self:
@@ -233,6 +236,20 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
         # Return the created output
         return output
+
+    def pop(self, index: int = -1) -> typing.Any:
+        # Fetch the original value
+        value = self[index]
+
+        # Try copying the value
+        with contextlib.suppress(AttributeError):
+            value = value.copy()
+
+        # Delete the item
+        del self[index]
+
+        # Return the value
+        return value
 
 
 # Extend nested types with list
