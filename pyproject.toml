@@ -1,7 +1,7 @@
 [project]
 name = "rednest"
-version = "0.4.1"
-description = "Redis object nesting using ReJSON"
+version = "0.5.0"
+description = "Redis dictionary & list nesting"
 readme = "README.md"
 license = {file = "LICENSE"}
 maintainers = [{name = "Nadav Tasher", email = "hey@nadav.app"}]
