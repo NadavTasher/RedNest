@@ -183,3 +183,45 @@ def test_list_multiprocess_actions_lock(my_list):
 
     # Make sure dictionary has changed
     assert my_list != my_values
+
+
+def test_dict_atomic_multiprocess(my_dictionary):
+    pass
+
+
+def test_list_atomic_multiprocess(my_list):
+    # Create my values
+    my_values = ["".join(random.sample(list(string.ascii_letters), 10)) for _ in range(1000)]
+
+    def stress():
+        # Update dictionary with random stuff
+        my_list[:] = ["".join(random.sample(list(string.ascii_letters), 10)) for _ in range(1000)]
+
+    # Create many stress processes
+    processes = [multiprocessing.Process(target=stress) for _ in range(10)]
+
+    # Execute some processes
+    for p in processes[:len(processes) // 2]:
+        p.start()
+
+    # Aqcuire the lock
+    with my_list.lock():
+        # Execute rest of processes
+        for p in processes[len(processes) // 2:]:
+            p.start()
+
+        # Set values
+        my_list[:] = my_values
+
+        # Sleep some time
+        time.sleep(random.random())
+
+        # Make sure my dictionary has my values
+        assert my_list == my_values
+
+    # Wait for all processes
+    for p in processes:
+        p.join()
+
+    # Make sure dictionary has changed
+    assert my_list != my_values

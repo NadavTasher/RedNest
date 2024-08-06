@@ -1,3 +1,4 @@
+import redis
 import typing
 import contextlib
 
@@ -41,22 +42,14 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Return the identifier
         return identifier
-
-    def __repr__(self) -> str:
-        # Format the data like a dictionary
-        return f"{{{', '.join(f'{repr(key)}: {repr(value)}' for key, value in self.items())}}}"
-
-    def __getitem__(self, key: typing.Any) -> typing.Any:
-        # Fetch the identifier, then return the value
-        return self._fetch_by_identifier(self._identifier_from_key(key))
-
-    def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
+    
+    def _set_item_using_pipeline(self, key: typing.Any, value: typing.Any, pipeline: redis.client.Pipeline) -> None:
         # Fetch the identifier
         original_identifier = self._redis.hget(self._key, self._encode(key))
 
         # Insert a new value
-        with self._create_identifier_from_value(value) as identifier:
-            self._redis.hset(self._key, self._encode(key), identifier)
+        with self._create_identifier_from_value(value, pipeline) as identifier:
+            pipeline.hset(self._key, self._encode(key), identifier)
 
         # If original identifier is not defined, there is nothing to delete
         if original_identifier is None:
@@ -68,6 +61,18 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Delete the original nested value
         self._delete_by_identifier(original_identifier)
+
+    def __repr__(self) -> str:
+        # Format the data like a dictionary
+        return f"{{{', '.join(f'{repr(key)}: {repr(value)}' for key, value in self.items())}}}"
+
+    def __getitem__(self, key: typing.Any) -> typing.Any:
+        # Fetch the identifier, then return the value
+        return self._fetch_by_identifier(self._identifier_from_key(key))
+
+    def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
+        # Set item internally using pipeline
+        self._set_item_using_pipeline(key, value, self._redis)
 
     def __delitem__(self, key: typing.Any) -> None:
         # Fetch the identifier

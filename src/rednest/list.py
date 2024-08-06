@@ -1,4 +1,5 @@
 import os
+import redis
 import typing
 import contextlib
 
@@ -46,6 +47,28 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
         # Return the identifier
         return identifier
+    
+    def _set_item_using_pipeline(self, index: int, value: typing.Any, pipeline: redis.client.Pipeline) -> None:
+        # Make sure index is positive
+        if index < 0:
+            # Index must be positive!
+            raise IndexError(index)
+        
+        # Fetch the identifier return index
+        identifier_index = len(pipeline.command_stack)
+        
+        # Fetch the identifier
+        pipeline.lrange(self._key, index, index)
+
+        # Generate the item value and set it
+        with self._create_identifier_from_value(value, pipeline) as identifier:
+            pipeline.lset(self._key, index, identifier)
+
+        # Return the identifier to delete
+        return identifier_index
+    
+    def _insert_using_pipeline(self, index: int, value: typing.Any, pipeline: redis.Redis) -> None:
+        pass
 
     def __repr__(self) -> str:
         # Format the data like a list
@@ -77,18 +100,50 @@ class List(typing.MutableSequence[typing.Any], Nested):
             if step > 1 and len(value) != len(range(start, stop, step)):
                 raise ValueError(f"Attempted to assign sequence of incompatible size {len(value)}")
 
+            # Initialize a pipeline and a deletion lise
+            indexes = list()
+            pipeline = self._redis.pipeline()
+
             # Create an iterator for the value
             iterator = iter(value)
 
             # Insert all of the items from the value
             for subindex, subvalue in zip(range(start, stop, step), iterator):
-                self[subindex] = subvalue
+                # Set the item and add an identifier to the deletion list
+                indexes.append(self._set_item_using_pipeline(subindex, subvalue, pipeline))
 
             # If the step is exactly 1, then we want to insert new values
             if step == 1:
-                # Loop over remaining items and insert them
+                # Loop over remaining items and insert them using the pipeline
                 for counter, subvalue in enumerate(iterator):
-                    self.insert(stop + counter, subvalue)
+                    # Insert using the pipeline
+                    self._insert_using_pipeline(stop + counter, subvalue, pipeline)
+
+            # Execute the pipeline
+            results = pipeline.execute()
+
+            # Loop over indexes and delete items
+            for identifier_index in indexes:
+                # Fetch the identifier response
+                identifier_response = results[identifier_index]
+
+                # If the response is empty, item does not exist
+                if not identifier_response:
+                    raise IndexError(index)
+
+                # Make sure the identifier response is a list
+                if not isinstance(identifier_response, Iterable):
+                    raise TypeError(identifier_response)
+
+                # Fetch the only item in the response
+                identifier, = identifier_response
+
+                # Make sure the identifier is a string or bytes
+                if not isinstance(identifier, (str, bytes)):
+                    raise TypeError(identifier)
+
+                # Delete the identifier
+                self._delete_by_identifier(original_identifier)
 
             # Nothing more to do
             return
@@ -97,12 +152,8 @@ class List(typing.MutableSequence[typing.Any], Nested):
         if index < 0:
             index += len(self)
 
-        # Fetch the identifier
-        original_identifier = self._identifier_from_index(index)
-
-        # Generate the item value and set it
-        with self._create_identifier_from_value(value) as identifier:
-            self._redis.lset(self._key, index, identifier)
+        # Set item internally using original connection
+        original_identifier = self._set_item_using_pipeline(index, value, self._redis)
 
         # Delete the original nested value
         self._delete_by_identifier(original_identifier)
