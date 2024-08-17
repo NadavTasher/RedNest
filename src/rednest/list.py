@@ -52,6 +52,10 @@ class List(typing.MutableSequence[typing.Any], Nested):
         return f"[{', '.join(repr(item) for item in self)}]"
 
     def __getitem__(self, index: typing.Union[int, slice]) -> typing.Union[typing.Any, typing.List[typing.Any]]:
+        # Make sure item is not pipelined
+        if self.pipelined:
+            raise NotImplementedError()
+        
         # If a slice is provided, return a list of items
         if isinstance(index, slice):
             # Create a list with all of the requested items
@@ -97,12 +101,20 @@ class List(typing.MutableSequence[typing.Any], Nested):
         if index < 0:
             index += len(self)
 
-        # Fetch the identifier
-        original_identifier = self._identifier_from_index(index)
+        # Initialize the original identifier
+        original_identifier = None
+
+        # Fetch the identifier only if item is not pipelined
+        if not self.pipelined:
+            original_identifier = self._identifier_from_index(index)
 
         # Generate the item value and set it
         with self._create_identifier_from_value(value) as identifier:
             self._redis.lset(self._key, index, identifier)
+
+        # Make sure original identifier is set
+        if not original_identifier:
+            return
 
         # Delete the original nested value
         self._delete_by_identifier(original_identifier)
@@ -116,22 +128,22 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
             # Nothing more to do
             return
-
-        # If index is negative, add the length to it
-        if index < 0:
-            index += len(self)
-
-        # Fetch the identifier
-        identifier = self._identifier_from_index(index)
-
-        # Check if index is the first item
+        
+        # Short path - if we are deleting at index 0 or -1, we can just use rpop and lpop respectively
         if index == 0:
             # Index 0 == lpop
-            self._redis.lpop(self._key, 1)
-        elif index == len(self) - 1:
+            identifier = self._redis.lpop(self._key, 1)
+        elif index == -1:
             # Index -1 == rpop
-            self._redis.rpop(self._key, 1)
+            identifier = self._redis.rpop(self._key, 1)
         else:
+            # If index is negative, add the length to it
+            if index < 0:
+                index += len(self)
+
+            # Fetch the identifier
+            identifier = self._identifier_from_index(index)
+
             # Generate a temporary value
             temporary_value = os.urandom(64).hex()
 
@@ -151,6 +163,10 @@ class List(typing.MutableSequence[typing.Any], Nested):
         self._delete_by_identifier(identifier)
 
     def __len__(self) -> int:
+        # Make sure item is not pipelined
+        if self.pipelined:
+            raise NotImplementedError()
+        
         # Fetch the list length
         length = self._redis.llen(self._key)
 

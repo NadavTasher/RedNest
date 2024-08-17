@@ -47,12 +47,20 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         return f"{{{', '.join(f'{repr(key)}: {repr(value)}' for key, value in self.items())}}}"
 
     def __getitem__(self, key: typing.Any) -> typing.Any:
+        # Make sure item is not pipelined
+        if self.pipelined:
+            raise NotImplementedError()
+        
         # Fetch the identifier, then return the value
         return self._fetch_by_identifier(self._identifier_from_key(key))
 
     def __setitem__(self, key: typing.Any, value: typing.Any) -> None:
-        # Fetch the identifier
-        original_identifier = self._redis.hget(self._key, self._encode(key))
+        # Initialize the original identifier
+        original_identifier = None
+
+        # If item is not pipelined, fetch the original value
+        if not self.pipelined:
+            original_identifier = self._redis.hget(self._key, self._encode(key))
 
         # Insert a new value
         with self._create_identifier_from_value(value) as identifier:

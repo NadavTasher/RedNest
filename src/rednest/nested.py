@@ -28,6 +28,11 @@ class Nested(abc.ABC):
 
     def lock(self) -> redis.lock.Lock:
         return redis.lock.Lock(self._redis, f"{self._key}:lock")
+    
+    @property
+    def pipelined(self):
+        # Return whether this nested item is being pipelined
+        return isinstance(self._redis, redis.client.Pipeline)
 
     @abc.abstractmethod
     def _initialize(self, value: typing.Any) -> None:
@@ -38,6 +43,10 @@ class Nested(abc.ABC):
         raise NotImplementedError()
 
     def _fetch_by_identifier(self, identifier: typing.Union[str, bytes]) -> typing.Any:
+        # Make sure item is not pipelined
+        if self.pipelined:
+            raise NotImplementedError()
+        
         # Make sure the identifier is a string
         if not isinstance(identifier, str):
             identifier = identifier.decode(self._ENCODING)
@@ -61,6 +70,10 @@ class Nested(abc.ABC):
         return decoded_item_value
 
     def _delete_by_identifier(self, identifier: typing.Union[str, bytes]) -> None:
+        # Make sure item is not pipelined
+        if self.pipelined:
+            raise NotImplementedError()
+        
         # Make sure the identifier is a string
         if not isinstance(identifier, str):
             identifier = identifier.decode(self._ENCODING)
@@ -86,16 +99,22 @@ class Nested(abc.ABC):
             # Create a new nested name
             nested_name = f"{self._master}:{os.urandom(10).hex()}"
 
+            # Create a new pipeline
+            pipeline = self._redis.pipeline()
+
             # Create a new nested class instance
-            nested_instance = nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master)
+            nested_instance = nested_type.nested_class(key=nested_name, redis=pipeline, master=self._master)
             nested_instance._initialize(value)
+
+            # Execute the pipeline
+            pipeline.execute()
 
             try:
                 # Yield the nested identifier
                 yield f"{nested_type.redis_identifier}:{self._encode(nested_name)}"
             except:
                 # If there was a failure to insert the identifier, delete the nested item
-                self._redis.delete(nested_name)
+                nested_instance._deinitialize()
 
                 # Re-raise the exception
                 raise
