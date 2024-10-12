@@ -186,7 +186,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
     # Utility functions
 
-    def setdefaults(self, *dictionaries: typing.Dict[typing.Any, typing.Any], **values: typing.Dict[typing.Any, typing.Any]) -> None:
+    def setdefaults(self, *dictionaries: typing.Dict[str, typing.Any], **values: typing.Any) -> None:
         # Update values to include all dicts
         for dictionary in dictionaries:
             values.update(dictionary)
