@@ -183,6 +183,35 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Return the created output
         return output
+    
+    # The built-in setdefault function can be optimized using hsetnx
+
+    def _setdefault(self, key: typing.Any, default: typing.Any = None) -> bool:
+        # If the key already exists, don't add it
+        # This is an optimization over collections since collections fetches the value.
+        if key in self:
+            return False
+        
+        # Create the nested item
+        with self._create_identifier_from_value(default) as identifier:
+            # Try inserting the nested identifier atomically
+            if self._redis.hsetnx(self._key, self._encode(key), identifier):
+                # Value was inserted, return it
+                return True
+            
+            # Delete the identifier
+            self._delete_by_identifier(identifier)
+        
+        # Value was not inserted, return actual value
+        return False
+    
+    def setdefault(self, key: typing.Any, default: typing.Any = None) -> typing.Any:
+        # Try to set default using the optimized _setdefault function
+        if self._setdefault(key, default):
+            return default
+        
+        # Default was not inserted, fetch actual value
+        return self[key]
 
     # Utility functions
 
@@ -191,9 +220,10 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         for dictionary in dictionaries:
             values.update(dictionary)
 
-        # Loop over all items and set the default value
-        for key, value in values.items():
-            self.setdefault(key, value)
+        # Loop over all items and set the default values
+        # using the optimized _setdefault functon
+        for key, default in values.items():
+            self._setdefault(key, default)
 
     # Munching functions
 

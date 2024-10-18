@@ -1,10 +1,10 @@
 import os
 import abc
-import redis
 import typing
 import contextlib
 import dataclasses
 
+import redis
 
 class Nested(abc.ABC):
 
@@ -18,16 +18,13 @@ class Nested(abc.ABC):
     # Type globals
     _ENCODING: str = "utf-8"
 
-    def __init__(self, redis: redis.Redis, key: str, master: typing.Optional[str] = None) -> None:
+    def __init__(self, connection: redis.Redis, key: str, master: typing.Optional[str] = None) -> None:
         # Store redis connection
-        self._redis = redis
+        self._redis = connection
 
         # Store structure information
         self._key = key
         self._master = master or key
-
-    def lock(self) -> redis.lock.Lock:
-        return redis.lock.Lock(self._redis, f"{self._key}:lock")
 
     @abc.abstractmethod
     def _initialize(self, value: typing.Any) -> None:
