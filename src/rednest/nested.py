@@ -95,7 +95,7 @@ class Nested(abc.ABC):
                 yield f"{nested_type.redis_identifier}:{self._encode(nested_name)}"
             except:
                 # If there was a failure to insert the identifier, delete the nested item
-                self._redis.delete(nested_name)
+                nested_instance._deinitialize()
 
                 # Re-raise the exception
                 raise
