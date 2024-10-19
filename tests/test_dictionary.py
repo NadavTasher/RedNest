@@ -297,12 +297,36 @@ def test_clear(my_dictionary):
     assert not other
 
 
+def test_setdefault(my_dictionary):
+    # Set a value
+    assert my_dictionary.setdefault("Test", "Value") == "Value"
+    assert my_dictionary.setdefault("Test", "Value1") == "Value"
+
+
 def test_setdefaults(my_dictionary):
     # Set some values
-    my_dictionary.setdefaults({"a": "b"}, c="d")
+    assert my_dictionary.setdefaults({"a": "b"}, c="d") == {"a": "b", "c": "d"}
 
     # Check my_dictionary structure
     assert my_dictionary == {"a": "b", "c": "d"}
+
+    # Re-set only some of the values
+    assert my_dictionary.setdefaults(c="e", z="a") == {"z": "a", "c": "d"}
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "d", "z": "a"}
+
+    # Add to the dictionary
+    assert my_dictionary.setdefaults({"test": "value"}) == {"test": "value"}
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "d", "z": "a", "test": "value"}
+
+    # Dictionary should not update with an empty update
+    assert not my_dictionary.setdefaults()
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "d", "z": "a", "test": "value"}
 
 
 def test_update(my_dictionary):
@@ -311,6 +335,24 @@ def test_update(my_dictionary):
 
     # Check my_dictionary structure
     assert my_dictionary == {"a": "b", "c": "d"}
+
+    # Re-set only some of the values
+    my_dictionary.update(c="e", z="a")
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "e", "z": "a"}
+
+    # Add to the dictionary
+    my_dictionary.update({"test": "value"})
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "e", "z": "a", "test": "value"}
+
+    # Dictionary should not update with an empty update
+    my_dictionary.update()
+
+    # Check my_dictionary structure
+    assert my_dictionary == {"a": "b", "c": "e", "z": "a", "test": "value"}
 
 
 def test_bunch_mode(my_dictionary):

@@ -9,15 +9,15 @@ from collections.abc import Mapping, Sequence
 
 class Encoder(json.JSONEncoder):
 
-    def default(self, obj: typing.Any) -> typing.Any:
+    def default(self, o: typing.Any) -> typing.Any:
         # Check if the object is a keystore
-        if isinstance(obj, (Mapping, Sequence)):
+        if isinstance(o, (Mapping, Sequence)):
             # Try copying the value
             with contextlib.suppress(AttributeError):
-                return obj.copy()  # type: ignore[union-attr]
+                return o.copy()  # type: ignore[union-attr]
 
         # Fallback default
-        return super(Encoder, self).default(obj)
+        return super().default(o)
 
 
 # Update the default dumps function

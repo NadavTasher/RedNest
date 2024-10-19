@@ -14,14 +14,14 @@ class List(typing.MutableSequence[typing.Any], Nested):
     # Copy type - the type used when calling copy
     _COPY_TYPE: typing.Type[typing.MutableSequence[typing.Any]] = list
 
-    def _initialize(self, value: typing.List[typing.Any]) -> None:
+    def initialize(self, value: typing.List[typing.Any]) -> None:
         # De-initialize before initializing
-        self._deinitialize()
+        self.deinitialize()
 
         # Update the list
         self[:] = value
 
-    def _deinitialize(self) -> None:
+    def deinitialize(self) -> None:
         # Clear the list
         self.clear()
 
@@ -171,9 +171,9 @@ class List(typing.MutableSequence[typing.Any], Nested):
             return False
 
         # Loop and check all items
-        for index in range(len(self)):
+        for index, value in enumerate(self):
             # Compare items
-            if self[index] != other[index]:
+            if value != other[index]:
                 return False
 
         # Items match

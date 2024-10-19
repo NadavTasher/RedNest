@@ -6,6 +6,7 @@ import dataclasses
 
 import redis
 
+
 class Nested(abc.ABC):
 
     # Instance redis connection
@@ -27,11 +28,11 @@ class Nested(abc.ABC):
         self._master = master or key
 
     @abc.abstractmethod
-    def _initialize(self, value: typing.Any) -> None:
+    def initialize(self, value: typing.Any) -> None:
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def _deinitialize(self) -> None:
+    def deinitialize(self) -> None:
         raise NotImplementedError()
 
     def _fetch_by_identifier(self, identifier: typing.Union[str, bytes]) -> typing.Any:
@@ -52,7 +53,7 @@ class Nested(abc.ABC):
                 continue
 
             # Found a nested type match, create a nested instance
-            return nested_type.nested_class(key=decoded_item_value, redis=self._redis, master=self._master)
+            return nested_type.nested_class(key=decoded_item_value, connection=self._redis, master=self._master)
 
         # Return the decoded value
         return decoded_item_value
@@ -70,7 +71,7 @@ class Nested(abc.ABC):
             return
 
         # Deinitialize the nested item
-        nested_item._deinitialize()
+        nested_item.deinitialize()
 
     @contextlib.contextmanager
     def _create_identifier_from_value(self, value: typing.Any) -> typing.Iterator[str]:
@@ -84,15 +85,15 @@ class Nested(abc.ABC):
             nested_name = f"{self._master}:{os.urandom(10).hex()}"
 
             # Create a new nested class instance
-            nested_instance = nested_type.nested_class(key=nested_name, redis=self._redis, master=self._master)
-            nested_instance._initialize(value)
+            nested_instance = nested_type.nested_class(key=nested_name, connection=self._redis, master=self._master)
+            nested_instance.initialize(value)
 
             try:
                 # Yield the nested identifier
                 yield f"{nested_type.redis_identifier}:{self._encode(nested_name)}"
             except:
                 # If there was a failure to insert the identifier, delete the nested item
-                nested_instance._deinitialize()
+                nested_instance.deinitialize()
 
                 # Re-raise the exception
                 raise
@@ -103,9 +104,9 @@ class Nested(abc.ABC):
         # Yield the regular value
         yield f":{self._encode(value)}"
 
-    def _encode(self, object: typing.Any) -> str:
+    def _encode(self, value: typing.Any) -> str:
         # Return the representation of the object
-        return repr(object)
+        return repr(value)
 
     def _decode(self, value: typing.Union[str, bytes]) -> typing.Any:
         # Make sure the value is a string
@@ -113,11 +114,12 @@ class Nested(abc.ABC):
             value = value.decode(self._ENCODING)
 
         # Evaluate the value
+        # pylint: disable-next=eval-used
         return eval(value)
 
 
 @dataclasses.dataclass
-class NestedType(object):
+class NestedType:
 
     # Database identifier
     redis_identifier: str
@@ -130,4 +132,4 @@ class NestedType(object):
 
 
 # List of all supported nested types
-NESTED_TYPES: typing.List[NestedType] = list()
+NESTED_TYPES: typing.List[NestedType] = []
