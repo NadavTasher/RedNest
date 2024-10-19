@@ -150,8 +150,6 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # Return the key and the value
         return key, self.pop(key)
 
-    # The built-in clear function can be optimized using hvals
-
     def clear(self) -> None:
         # Fetch raw values
         raw_values = self._connection.hvals(self._key)
@@ -167,8 +165,6 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Delete the hash
         self._connection.delete(self._key)
-
-    # The built-in update function can be optimized using hmset
 
     def update(self, other: typing.Any = (), /, **kwargs: typing.Any) -> None:
         # Add values from "other" to "kwargs", since kwargs is a dictionary
@@ -211,8 +207,6 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
             # Delete the value by the identifier
             self._delete_by_identifier(original_identifier)
-
-    # The built-in setdefault function can be optimized using hsetnx
 
     def setdefault(self, key: typing.Any, default: typing.Any = None) -> typing.Any:
         try:
