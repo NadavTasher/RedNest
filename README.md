@@ -1,5 +1,5 @@
 # RedNest
-Redis dictionary & list nesting using `redis-py` and Redis `Hash`es and `List`s
+Redis dictionary & list nesting for Python objects using `redis-py` and Redis `Hash`es and `List`s
 
 ## Usage example
 ```python
