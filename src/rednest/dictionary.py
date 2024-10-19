@@ -164,6 +164,8 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Return the key and the value
         return key, self.pop(key)
+    
+    # TODO: Copy can be optimized using hgetall
 
     def copy(self) -> typing.Mapping[typing.Any, typing.Any]:
         # Create initial bunch
@@ -183,6 +185,18 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
         # Return the created output
         return output
+    
+    # The built-in update function can be optimized using hmset
+
+    def update(self, other: typing.Optional[typing.Union[typing.Mapping[typing.Any, typing.Any], typing.Iterable[typing.Tuple[typing.Any, typing.Any]]]], **values: typing.Any) -> None:
+        # Update the "values" dictionary using values from the "other" argument.
+        values.update(other)
+
+        # First of all, fetch the identifiers for the keys about to be updated
+
+        # Update all of the values in "values"
+        
+    # TODO: The built-in clean function can be optimized (order)
     
     # The built-in setdefault function can be optimized using hsetnx
 
@@ -224,6 +238,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # using the optimized _setdefault functon
         for key, default in values.items():
             self._setdefault(key, default)
+
 
     # Munching functions
 
