@@ -27,7 +27,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
     def _identifier_from_index(self, index: int) -> typing.Union[str, bytes]:
         # Request the list at slice index->index
-        identifier_response = self._redis.lrange(self._key, index, index)
+        identifier_response = self._connection.lrange(self._key, index, index)
 
         # If the response is empty, item does not exist
         if not identifier_response:
@@ -102,7 +102,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
         # Generate the item value and set it
         with self._create_identifier_from_value(value) as identifier:
-            self._redis.lset(self._key, index, identifier)
+            self._connection.lset(self._key, index, identifier)
 
         # Delete the original nested value
         self._delete_by_identifier(original_identifier)
@@ -127,16 +127,16 @@ class List(typing.MutableSequence[typing.Any], Nested):
         # Check if index is the first item
         if index == 0:
             # Index 0 == lpop
-            self._redis.lpop(self._key, 1)
+            self._connection.lpop(self._key, 1)
         elif index == len(self) - 1:
             # Index -1 == rpop
-            self._redis.rpop(self._key, 1)
+            self._connection.rpop(self._key, 1)
         else:
             # Generate a temporary value
             temporary_value = os.urandom(64).hex()
 
             # Use a pipeline to execute all of the actions atomically
-            pipeline = self._redis.pipeline()
+            pipeline = self._connection.pipeline()
 
             # Set the temporary value in the selected index
             pipeline.lset(self._key, index, temporary_value)
@@ -152,7 +152,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
 
     def __len__(self) -> int:
         # Fetch the list length
-        length = self._redis.llen(self._key)
+        length = self._connection.llen(self._key)
 
         # Make sure the length is an integer
         if not isinstance(length, int):
@@ -188,11 +188,11 @@ class List(typing.MutableSequence[typing.Any], Nested):
         if index == 0:
             # Insert 0 == lpush
             with self._create_identifier_from_value(value) as identifier:
-                self._redis.lpush(self._key, identifier)
+                self._connection.lpush(self._key, identifier)
         elif index == len(self):
             # Insert -1 == rpush
             with self._create_identifier_from_value(value) as identifier:
-                self._redis.rpush(self._key, identifier)
+                self._connection.rpush(self._key, identifier)
         else:
             # Fetch the identifier
             original_identifier = self._identifier_from_index(index)
@@ -207,7 +207,7 @@ class List(typing.MutableSequence[typing.Any], Nested):
                 temporary_value = os.urandom(64).hex()
 
                 # Use a pipeline to execute all of the actions atomically
-                pipeline = self._redis.pipeline()
+                pipeline = self._connection.pipeline()
 
                 # Set the temporary value at the current index
                 pipeline.lset(self._key, index, temporary_value)

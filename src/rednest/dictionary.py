@@ -29,7 +29,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
     def _identifier_from_key(self, key: typing.Any) -> typing.Union[str, bytes]:
         # Fetch the identifier from the hash
-        identifier = self._redis.hget(self._key, self._encode(key))
+        identifier = self._connection.hget(self._key, self._encode(key))
 
         # If the response is empty, item does not exist
         if identifier is None:
@@ -59,18 +59,18 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         identifier = self._identifier_from_key(key)
 
         # Delete the key from hash
-        self._redis.hdel(self._key, self._encode(key))
+        self._connection.hdel(self._key, self._encode(key))
 
         # Delete the nested value
         self._delete_by_identifier(identifier)
 
     def __contains__(self, key: typing.Any) -> bool:
         # Make sure key exists in database
-        return bool(self._redis.hexists(self._key, self._encode(key)))
+        return bool(self._connection.hexists(self._key, self._encode(key)))
 
     def __iter__(self) -> typing.Iterator[typing.Any]:
         # Fetch all hash keys
-        encoded_keys = self._redis.hkeys(self._key)
+        encoded_keys = self._connection.hkeys(self._key)
 
         # Make sure encoded keys is iterable
         if not isinstance(encoded_keys, Iterable):
@@ -87,7 +87,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
     def __len__(self) -> int:
         # Fetch the length of the hash
-        length = self._redis.hlen(self._key)
+        length = self._connection.hlen(self._key)
 
         # Make sure the length is an integer
         if not isinstance(length, int):
@@ -154,7 +154,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
     def clear(self) -> None:
         # Fetch raw values
-        raw_values = self._redis.hvals(self._key)
+        raw_values = self._connection.hvals(self._key)
 
         # Make sure raw values is iterable
         if not isinstance(raw_values, Iterable):
@@ -166,7 +166,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
             self._delete_by_identifier(identifier)
 
         # Delete the hash
-        self._redis.delete(self._key)
+        self._connection.delete(self._key)
 
     # The built-in update function can be optimized using hmset
 
@@ -180,7 +180,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
             return
 
         # Fetch the original identifiers - used for future deletion
-        original_identifiers = self._redis.hmget(self._key, [self._encode(key) for key in kwargs])
+        original_identifiers = self._connection.hmget(self._key, [self._encode(key) for key in kwargs])
 
         # Create new identifiers for all values
         with contextlib.ExitStack() as exit_stack:
@@ -193,7 +193,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
             }
 
         # Now set all of the new identifiers in one go using hset with a mapping
-        self._redis.hset(self._key, mapping=mapping)
+        self._connection.hset(self._key, mapping=mapping)
 
         # Make sure original identifiers is iterable
         if not isinstance(original_identifiers, Iterable):
@@ -222,7 +222,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
             # Create the nested item
             with self._create_identifier_from_value(default) as identifier:
                 # Try inserting the nested identifier atomically
-                if self._redis.hsetnx(self._key, self._encode(key), identifier):
+                if self._connection.hsetnx(self._key, self._encode(key), identifier):
                     # Value was inserted, return it
                     return default
 
@@ -239,7 +239,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         output = self._COPY_TYPE()
 
         # Fetch the raw values
-        raw_mapping = self._redis.hgetall(self._key)
+        raw_mapping = self._connection.hgetall(self._key)
 
         # Make sure raw values are a mapping
         if not isinstance(raw_mapping, Mapping):

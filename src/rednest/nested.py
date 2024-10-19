@@ -10,7 +10,7 @@ import redis
 class Nested(abc.ABC):
 
     # Instance redis connection
-    _redis: redis.Redis = None  # type: ignore
+    _connection: redis.Redis = None  # type: ignore
 
     # Instance structure information
     _key: str = None  # type: ignore
@@ -21,7 +21,7 @@ class Nested(abc.ABC):
 
     def __init__(self, connection: redis.Redis, key: str, master: typing.Optional[str] = None) -> None:
         # Store redis connection
-        self._redis = connection
+        self._connection = connection
 
         # Store structure information
         self._key = key
@@ -53,7 +53,7 @@ class Nested(abc.ABC):
                 continue
 
             # Found a nested type match, create a nested instance
-            return nested_type.nested_class(key=decoded_item_value, connection=self._redis, master=self._master)
+            return nested_type.nested_class(key=decoded_item_value, connection=self._connection, master=self._master)
 
         # Return the decoded value
         return decoded_item_value
@@ -85,7 +85,7 @@ class Nested(abc.ABC):
             nested_name = f"{self._master}:{os.urandom(10).hex()}"
 
             # Create a new nested class instance
-            nested_instance = nested_type.nested_class(key=nested_name, connection=self._redis, master=self._master)
+            nested_instance = nested_type.nested_class(key=nested_name, connection=self._connection, master=self._master)
             nested_instance.initialize(value)
 
             try:
