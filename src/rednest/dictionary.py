@@ -259,8 +259,21 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         if other:
             kwargs.update(other)
 
-        # Loop over all items and try to set the default values
-        return {key: self.setdefault(key, value) for key, value in kwargs.items()}
+        # Create the output object
+        output = self._COPY_TYPE()
+
+        # If there is nothing to update, return
+        if not kwargs:
+            return output
+
+        # Loop over all items
+        for key, value in kwargs.items():
+            # Try setting a default value and update the output mapping
+            output[key] = self.setdefault(key, value)
+
+        # Return the output mapping
+        return output
+
 
     # Munching functions
 
