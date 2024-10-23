@@ -10,6 +10,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
 ]
 keywords = ["redis", "rejson", "database", "dict"]
+dependencies = [
+    "redis>=5.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/NadavTasher/RedNest"
@@ -18,7 +21,7 @@ Homepage = "https://github.com/NadavTasher/RedNest"
 exclude = "tests"
 
 [build-system]
-requires = ["setuptools>=61.0", "redis>=4.2.0"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.distutils.bdist_wheel]
