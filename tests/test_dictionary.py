@@ -329,6 +329,17 @@ def test_setdefaults(my_dictionary):
     assert my_dictionary == {"a": "b", "c": "d", "z": "a", "test": "value"}
 
 
+def test_getdefaults(my_dictionary):
+    # Set some values
+    my_dictionary.update(a="b", c="d", e=None)
+
+    # Fetch some of the values
+    assert my_dictionary.getdefaults(a=None, c=None, e=None, g=1) == {"a": "b", "c": "d", "e": None, "g": 1}
+
+    # Make sure the values were not set
+    assert my_dictionary == {"a": "b", "c": "d", "e": None}
+
+
 def test_update(my_dictionary):
     # Set some values
     my_dictionary.update({"a": "b"}, c="d")

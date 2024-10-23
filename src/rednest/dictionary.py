@@ -13,7 +13,7 @@ DEFAULT = object()
 
 class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
 
-    # Copy type - the type used when calling copy
+    # Copy type - the type used when calling copy, setdefaults and getdefaults
     _COPY_TYPE: typing.Type[typing.MutableMapping[typing.Any, typing.Any]] = dict
 
     def initialize(self, value: typing.Dict[typing.Any, typing.Any]) -> None:
@@ -229,7 +229,7 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
     # Utility functions
 
     def copy(self) -> typing.Mapping[typing.Any, typing.Any]:
-        # Create initial bunch
+        # Create output mapping
         output = self._COPY_TYPE()
 
         # Fetch the raw values
@@ -274,6 +274,40 @@ class Dictionary(typing.MutableMapping[typing.Any, typing.Any], Nested):
         # Return the output mapping
         return output
 
+    def getdefaults(self, other: typing.Any = (), /, **kwargs: typing.Any) -> typing.Mapping[typing.Any, typing.Any]:
+        # Add values from "other" to "kwargs", since kwargs is a dictionary
+        if other:
+            kwargs.update(other)
+
+        # Create the output object
+        output = self._COPY_TYPE()
+
+        # If there is nothing to fetch, return
+        if not kwargs:
+            return output
+
+        # Create a list of the keys to preserve the order
+        keys = list(kwargs)
+
+        # Use hmget to get multiple values at once
+        identifiers = self._connection.hmget(self._key, [self._encode(key) for key in keys])
+
+        # Make sure original identifiers is iterable
+        if not isinstance(identifiers, Iterable):
+            raise TypeError(identifiers)
+
+        # Loop over identifiers
+        for key, identifier in zip(keys, identifiers):
+            # Check if a default value should be used
+            if identifier is None:
+                # Update output mapping from defaults
+                output[key] = kwargs[key]
+            else:
+                # Update output mapping from identifier
+                output[key] = self._fetch_by_identifier(identifier)
+
+        # Return the output mapping
+        return output
 
     # Munching functions
 
