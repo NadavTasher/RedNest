@@ -9,7 +9,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
 ]
-keywords = ["redis", "rejson", "database", "dict"]
+keywords = ["redis", "database", "dict", "list"]
 dependencies = [
     "redis>=5.0.0",
 ]
